@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>log-sm Browser Example</title>
+</head>
+<body>
+    <h1>log-sm Browser Example</h1>
+    <p>Open the browser console to see logs.</p>
+    
+    <button id="logBtn">Generate Logs</button>
+    <button id="errorBtn">Generate Error</button>
+    
+    <script type="module">
+        // Import from the ESM build
+        import { createLogger, LogLevel } from '../dist/index.mjs';
+
+        // Create a logger for the browser
+        const logger = createLogger({
+            level: LogLevel.DEBUG,
+            pretty: false  // Keep false for performance
+        });
+
+        // Add click handlers
+        document.getElementById('logBtn').addEventListener('click', () => {
+            logger.info('Button clicked', {
+                buttonId: 'logBtn',
+                timestamp: Date.now(),
+                userAgent: navigator.userAgent
+            });
+        });
+
+        document.getElementById('errorBtn').addEventListener('click', () => {
+            logger.error('Error button clicked', {
+                buttonId: 'errorBtn',
+                errorType: 'user-generated',
+                url: window.location.href
+            });
+        });
+
+        // Log page load
+        logger.info('Page loaded', {
+            url: window.location.href,
+            referrer: document.referrer,
+            timestamp: Date.now()
+        });
+
+        // Example with redaction for sensitive data
+        const secureLogger = createLogger({
+            redaction: {
+                fields: ['password', 'token', 'apiKey'],
+                deep: true
+            }
+        });
+
+        // Simulate a login attempt (password will be redacted)
+        setTimeout(() => {
+            secureLogger.info('Simulated login', {
+                username: 'demo-user',
+                password: 'this-will-be-redacted',
+                sessionId: 'session-123'
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

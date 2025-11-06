@@ -9,11 +9,13 @@ export class Logger {
   private level: LogLevel;
   private sinks: LogSink[];
   private redactionOptions?: LoggerConfig['redaction'];
+  private context: Record<string, any>;
 
-  constructor(config: LoggerConfig = {}) {
+  constructor(config: LoggerConfig = {}, context: Record<string, any> = {}) {
     this.level = config.level ?? LogLevel.INFO;
     this.sinks = config.sinks ?? [new ConsoleSink(config.pretty ?? false)];
     this.redactionOptions = config.redaction;
+    this.context = context;
   }
 
   /**
@@ -55,24 +57,14 @@ export class Logger {
    * Create a child logger with additional context
    */
   child(context: Record<string, any>): Logger {
-    const childLogger = new Logger({
+    // Merge parent context with new context
+    const mergedContext = { ...this.context, ...context };
+    
+    return new Logger({
       level: this.level,
       sinks: this.sinks,
       redaction: this.redactionOptions,
-    });
-    
-    // Override log method to include context
-    const originalLog = childLogger.log.bind(childLogger);
-    childLogger.log = (
-      levelNum: LogLevel,
-      levelName: LogLevelName,
-      message: string,
-      data?: Record<string, any>
-    ) => {
-      originalLog(levelNum, levelName, message, { ...context, ...data });
-    };
-
-    return childLogger;
+    }, mergedContext);
   }
 
   /**
@@ -120,11 +112,12 @@ export class Logger {
       return;
     }
 
-    // Create log entry
+    // Create log entry with context
     const entry: LogEntry = {
       level: levelName,
       timestamp: new Date().toISOString(),
       message,
+      ...this.context,
       ...data,
     };
 
