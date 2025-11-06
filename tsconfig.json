@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020"],
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "stripInternal": true,
+    "removeComments": true,
+    "importsNotUsedAsValues": "remove",
+    "useDefineForClassFields": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+  },
+  "include": ["src"]
+}
