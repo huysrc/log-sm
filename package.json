@@ -1,0 +1,46 @@
+{
+  "name": "log-sm",
+  "version": "1.0.0",
+  "description": "A zero-dependency, ultra-fast, structured logger for Node, Homey, and Web runtimes",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:cjs && npm run build:esm",
+    "build:cjs": "tsc --module commonjs --outDir dist",
+    "build:esm": "tsc --module esnext --outDir dist/esm --declaration false --declarationMap false && mv dist/esm/index.js dist/index.mjs && rm -rf dist/esm",
+    "test": "node --test",
+    "lint": "echo 'No linter configured yet'",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "logger",
+    "logging",
+    "structured-logging",
+    "zero-dependency",
+    "fast",
+    "lightweight",
+    "node",
+    "homey",
+    "web",
+    "browser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huysrc/log-sm.git"
+  }
+}
