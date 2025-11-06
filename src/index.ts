@@ -5,7 +5,7 @@
 
 export { Logger, createLogger } from './logger';
 export { ConsoleSink, StreamSink, MemorySink, NoOpSink } from './sinks';
-export { redactFields, redactNestedFields } from './redaction';
+export { redactFields } from './redaction';
 export {
   LogLevel,
   LogLevelName,

@@ -29,7 +29,7 @@ export function redactFields(
   const result: any = {};
 
   for (const key in obj) {
-    if (!obj.hasOwnProperty(key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
 
     const value = obj[key];
     const shouldRedact = options.fields.some(field => matchesField(key, field));
@@ -60,41 +60,4 @@ function matchesField(key: string, field: string): boolean {
   return parts[parts.length - 1] === key;
 }
 
-/**
- * Apply redaction to nested paths like "user.password"
- */
-export function redactNestedFields(
-  obj: any,
-  path: string,
-  replacement: string
-): any {
-  if (!obj || typeof obj !== 'object') {
-    return obj;
-  }
 
-  const parts = path.split('.');
-  const key = parts[0];
-
-  if (parts.length === 1) {
-    // Last part of the path
-    if (obj.hasOwnProperty(key)) {
-      const result = Array.isArray(obj) ? [...obj] : { ...obj };
-      result[key] = replacement;
-      return result;
-    }
-    return obj;
-  }
-
-  // Recurse into nested object
-  if (obj.hasOwnProperty(key)) {
-    const result = Array.isArray(obj) ? [...obj] : { ...obj };
-    result[key] = redactNestedFields(
-      obj[key],
-      parts.slice(1).join('.'),
-      replacement
-    );
-    return result;
-  }
-
-  return obj;
-}

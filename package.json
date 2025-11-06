@@ -14,7 +14,7 @@
   "scripts": {
     "build": "npm run build:cjs && npm run build:esm",
     "build:cjs": "tsc --module commonjs --outDir dist",
-    "build:esm": "tsc --module esnext --outDir dist/esm --declaration false --declarationMap false && mv dist/esm/index.js dist/index.mjs && rm -rf dist/esm",
+    "build:esm": "tsc --module esnext --outDir dist/esm --declaration false --declarationMap false && node scripts/build-esm.js",
     "test": "node --test",
     "lint": "echo 'No linter configured yet'",
     "prepublishOnly": "npm run build"
