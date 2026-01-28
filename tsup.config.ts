@@ -3,6 +3,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
     entry: {
         core: 'src/core.ts',
+        format: 'src/format.ts',
         redact: 'src/redact.ts',
     },
     format: ['esm', 'cjs'],

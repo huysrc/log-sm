@@ -121,7 +121,7 @@ export interface ILogger {
      * - If targeting very old JS engines without `Promise.finally`, ensure your build includes a polyfill
      *   or transpile appropriately.
      */
-    withLevel<T>(level: /*LogLevel |*/ LogLevelName, fn: (log: ILogger) => T | Promise<T>): T | Promise<T>;
+    withLevel<T>(level: LogLevel | LogLevelName, fn: (log: ILogger) => T | Promise<T>): T | Promise<T>;
 
     /**
      * Temporarily override (raise/lower) the level for `ms` milliseconds.
@@ -132,7 +132,7 @@ export interface ILogger {
      * - In runtimes without timers, timed overrides require manual dispose.
      * - If timers are missing, the override still applies but will not auto-expire.
      */
-    withLevelTimed(level: /*LogLevel |*/ LogLevelName, ms: number): () => void;
+    withLevelTimed(level: LogLevel | LogLevelName, ms: number): () => void;
 
     /**
      * Create a sibling logger with static tags merged into structured data of every call.
@@ -176,7 +176,7 @@ export type CreateLoggerOptions = {
      * - `LOG_LEVEL=WARN|WRN` (case-insensitive, special-case for `LOG_LEVEL` only) uses `warnLevel` as the base gate.
      * - Otherwise: `NODE_ENV=production` => `prodDefault` (default ERROR), else INFO.
      */
-    level?: /*LogLevel |*/ LogLevelName;
+    level?: LogLevel | LogLevelName;
     
     /**
      * Optional level labels/prefixes (e.g., "[ERROR]", ...).
@@ -200,7 +200,7 @@ export type CreateLoggerOptions = {
      * Default: ERROR (WARN remains visible even when the base level is ERROR).
      * Set to INFO for conventional gating (WARN visible when base `level >= INFO`).
      */
-    warnLevel?: /*LogLevel |*/ LogLevelName;
+    warnLevel?: LogLevel | LogLevelName;
     
     /**
      * Fallback path for WARN when a custom `sinks.warn` is not provided. ('sinks' null is no-op)
@@ -284,7 +284,7 @@ export type CreateLoggerOptions = {
      * Default base level when `NODE_ENV=production` and no explicit `level` / `DEBUG_MODE` / `LOG_LEVEL` are provided.
      * Default: ERROR.
      */
-    prodDefault?: /*LogLevel |*/ LogLevelName;
+    prodDefault?: LogLevel | LogLevelName;
 
     // /** Clock source for testing. Default: () => Date.now() */
     // now?: () => number;
@@ -564,6 +564,7 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
      * - Fallback to `process.env` only when `process` exists.
      * - Do NOT assume `process` exists outside Node. Always guard with `typeof process !== 'undefined'`.
      */
+    // @ts-ignore
     const env = opts.env ?? ((typeof process !== 'undefined' ? process.env : undefined) as
         | Record<string, string | undefined>
         | undefined);
@@ -626,7 +627,7 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
 
     /** Core primitive: push a level override, optional expiry; returns an idempotent disposer. */
     const pushOverride = (
-        level?: LogLevelName,
+        level?: LogLevel | LogLevelName,
         ms?: number,
         debug?: DebugWindowOpts
     ): () => void => {
@@ -713,12 +714,12 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
             if (!Number.isFinite(ms) || ms <= 0) throw new Error("withLevelTimed requires a positive ms duration.");
             return pushOverride(level, ms);
         },
-        withLevel<T>(level: /*LogLevel |*/ LogLevelName, fn: (log: ILogger) => T | Promise<T>): T | Promise<T> {
+        withLevel<T>(level: LogLevel | LogLevelName, fn: (log: ILogger) => T | Promise<T>): T | Promise<T> {
             const dispose = pushOverride(level);
             try {
                 const r = fn(api);
                 if (r && typeof (r as any).then === 'function') {
-                    return (r as Promise<T>).finally(dispose);
+                    return Promise.resolve(r as any).finally(dispose) as any;
                 }
                 dispose();
                 return r as T;
