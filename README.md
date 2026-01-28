@@ -1,3 +1,7 @@
+[![npm version](https://img.shields.io/npm/v/log-sm.svg?style=flat-square)](https://www.npmjs.com/package/log-sm)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/log-sm?style=flat-square)](https://bundlephobia.com/result?p=log-sm)
+[![license](https://img.shields.io/github/license/huysrc/log-sm?style=flat-square)](./LICENSE)
+
 # 🪶log-sm
 ```
 ┌────────────────────────────────┐
@@ -5,26 +9,21 @@
 └────────────────────────────────┘
 ```
 
-[![npm version](https://img.shields.io/npm/v/log-sm.svg?style=flat-square)](https://www.npmjs.com/package/log-sm)
-[![bundle size](https://img.shields.io/bundlephobia/minzip/log-sm?style=flat-square)](https://bundlephobia.com/result?p=log-sm)
-[![license](https://img.shields.io/github/license/huynguyen/log-sm?style=flat-square)](./LICENSE)
-
 > Zero-deps • Zero noise • Just logs — clean, fast, predictable, and environment-aware.
 
 A **zero-dependency**, **ultra-fast**, **structured logger** for **Node**, **Homey**, and **Web** runtimes.  
 Built around a **tiny-first core** with optional **deep redaction**, **pluggable sinks**, and **predictable levels** —  
 ideal for developers who value **clarity**, **lightweight design**, and **control** without heavy abstractions.
 
----
 
 ## 🧬 Example Preview
 
 ```ts
 import { createLogger } from 'log-sm';
 
-const { logger } = createLogger();
+const log = createLogger();
 
-logger.info('Server started', { port: 8080 });
+log.info('Server started', { port: 8080 });
 // Server started { port: 8080 }
 ```
 
@@ -34,24 +33,23 @@ logger.info('Server started', { port: 8080 });
 import { createLogger } from 'log-sm';
 import { makeMask } from 'log-sm/redact';
 
-const mask = makeMask(undefined, { ciKeys: true, partialMatch: true }); // case-insensitive, substring match and default mask keys.
-const { logger } = createLogger({ mask });
+const mask = makeMask(undefined, { ciKeys: true, partialMatch: true });
+const log = createLogger({ mask });
 
-logger.debug('Login', { user: 'me', password: 'abc123' });
+log.debug('Login', { user: 'me', password: 'abc123' });
 // Login { user: "me", password: "***" }
 ```
 
 🔹 Enable temporary debug:
 
 ```ts
-const { logger, debugForMs } = createLogger();
+const log = createLogger();
 
-debugForMs(3000); // enable DEBUG for 3 seconds
-logger.debug('trace start');
+log.debugForMs(3000); // enable DEBUG for 3 seconds
+log.debug('trace start');
 // after 3s, debug reverts automatically
 ```
 
----
 
 ## ✨ Features
 
@@ -67,7 +65,6 @@ logger.debug('trace start');
 - 🧱 **Child Loggers** – attach contextual tags (service, tenant, etc.) cheaply.
 - 🧮 **Type-Safe** – written in pure TypeScript, Node/browser compatible.
 
----
 
 ## 🧱 Philosophy
 
@@ -82,7 +79,6 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 - No globals, no side effects.
 - Fully composable (`child()`, custom sinks).
 
----
 
 ## ⚠️ Why No `LogLevel.WARN`
 
@@ -95,9 +91,9 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 | `warnFallback` | Redirects `warn()` if no custom sink is defined.              |
 
 ```ts
-const { logger } = createLogger({
-  warnLevel: LogLevel.INFO,     // show warnings like info
-  warnFallback: 'error',        // reuse error sink
+const log = createLogger({
+    warnLevel: LogLevel.INFO,     // show warnings like info
+    warnFallback: 'error',        // reuse error sink
 });
 ```
 
@@ -110,31 +106,32 @@ This approach keeps level gating simple, predictable, and expressive.
 
 ```ts
 export type CreateLoggerOptions = {
-  sinks?: {
-    error?: (msg: string, data?: unknown) => void;
-    warn?:  (msg: string, data?: unknown) => void;
-    info?:  (msg: string, data?: unknown) => void;
-    debug?: (msg: string, data?: unknown) => void;
-  } | null;
+    sinks?: {
+        error?: (msg: string, data?: unknown) => void;
+        warn?:  (msg: string, data?: unknown) => void;
+        info?:  (msg: string, data?: unknown) => void;
+        debug?: (msg: string, data?: unknown) => void;
+    } | null;
 
-  level?: LogLevel;                       // Base gate for info/debug
-  warnLevel?: LogLevel;                   // Separate gate for warn()
-  warnFallback?: 'error'|'info'|'debug'|'console'|'ignore'; // default: 'console'
-  debugFallback?: 'info'|'console'|'ignore';                // default: 'console'
-  consoleFormatter?: (level: 'error'|'warn'|'info'|'debug', msg: string, data?: unknown) => string;
-  levelTags?: { error?: string; warn?: string; info?: string; debug?: string } | null;
+    level?: LogLevel | 'none' | 'error' | 'info' | 'debug';     // base gate for info/debug
+    levelTags?: { error?: string; warn?: string; info?: string; debug?: string } | null;
 
-  truncate?: number;                      // shallow truncate long strings
-  mask?: (v: unknown) => unknown;         // optional redact function
-  tags?: Record<string, string|number>;   // static tags merged on each log
-  mergeTagsPolicy?: 'dataWins'|'tagsWin'; // merge order
+    warnLevel?: LogLevel | 'none' | 'error' | 'info' | 'debug'; // separate gate for warn()
+    warnFallback?: 'error'|'info'|'debug'|'console'|'ignore';   // default: 'console'
+    debugFallback?: 'info'|'console'|'ignore';    // default: 'console'
 
-  includeStack?: 'never'|`ifNonError`|'always'; // when to include stack
-  errorInputPolicy?: 'auto'|'always'|'never';   // merge rule for error inputs
-  inputKey?: string;                            // key for non-Error inputs (default: 'input')
+    includeStack?: 'never'|`ifNonError`|'always'; // when to include stack
+    errorInputPolicy?: 'auto'|'always'|'never';   // merge rule for error inputs
+    inputKey?: string;                            // key for non-Error inputs (default: 'input')
 
-  env?: Record<string, string|undefined>; // custom env bag
-  prodDefault?: LogLevel;                 // default prod level (default: ERROR)
+    truncate?: number;                            // shallow truncate long strings
+    mask?: (v: unknown) => unknown;               // optional redact function
+    tags?: Record<string, string|number>;         // static tags merged on each log
+    mergeTagsPolicy?: 'dataWins'|'tagsWin';       // merge order
+    consoleFormatter?: ConsoleFormatter;          // optional console formatter (color, JSON...)
+
+    env?: Record<string, string|undefined>;       // custom env bag
+    prodDefault?: LogLevel;                       // default prod level (default: ERROR)
 };
 ```
 
@@ -146,17 +143,17 @@ export type CreateLoggerOptions = {
 |--------------------|------------------------------------|-----------------|
 | `sinks`            | Custom output targets              | `console.*`     |
 | `sinks: null`      | Silent (no-op) logger              | —               |
+| `levelTags`        | Apply prefix strings per level     | —               |
 | `warnLevel`        | Separate warn visibility           | `ERROR`         |
 | `warnFallback`     | Redirect warn() when missing sink  | `console.warn`  |
 | `debugFallback`    | Redirect debug() when missing sink | `console.debug` |
-| `consoleFormatter` | Single-line or colorized output    | —               |
-| `levelTags`        | Apply prefix strings per level     | —               |
-| `mask`             | Apply redaction before output      | —               |
-| `truncate`         | Clamp long string fields           | 0 (off)         |
-| `tags`             | Static metadata (cheap merge)      | —               |
-| `mergeTagsPolicy`  | Tag vs data precedence             | `dataWins`      |
 | `includeStack`     | Stack inclusion rule               | `'ifNonError'`  |
 | `errorInputPolicy` | Input merge rule for error()       | `'auto'`        |
+| `truncate`         | Clamp long string fields           | 0 (off)         |
+| `mask`             | Apply redaction before output      | —               |
+| `tags`             | Static metadata (cheap merge)      | —               |
+| `mergeTagsPolicy`  | Tag vs data precedence             | `dataWins`      |
+| `consoleFormatter` | Single-line or colorized output    | —               |
 | `prodDefault`      | Override prod default level        | `ERROR`         |
 
 ---
@@ -165,10 +162,10 @@ export type CreateLoggerOptions = {
 
 ```ts
 export const enum LogLevel {
-  NONE = 0,
-  ERROR = 1,
-  INFO  = 2,
-  DEBUG = 3
+    NONE = 0,
+    ERROR = 1,
+    INFO  = 2,
+    DEBUG = 3
 }
 ```
 
@@ -196,16 +193,16 @@ import { makeMask, redact, extendDefaultMaskKeys } from 'log-sm/redact';
 ### RedactOptions
 ```ts
 export type RedactOptions = {
-  mask?: string;               // replace value for matching keys. (default: '***')
-  ciKeys?: boolean;            // case-insensitive key matching. (default: false)
-  partialMatch?: boolean;      // substring match for keys (e.g., containing 'token'). (default: false)
-  maskMapKeys?: boolean;       // also mask Map keys. (default: false)
-  maskTypedArrays?: boolean;   // replace typed arrays with placeholders. (default: false)
-  includeInherited?: boolean;  // include inherited enumerable keys (own keys only). (default: false)
-  includeSymbols?: boolean;    // include symbol keys; default false for speed
-  getterErrorValue?: string;   // value to use when a getter throws. (default: '[GetterError]')
-  maxDepth?: number;           // max recursion depth; 0 = only root. (default: 8)
-  maxNodes?: number;           // max visited nodes to avoid pathological graphs. (default: 50_000)
+    mask?: string;               // replace value for matching keys. (default: '***')
+    ciKeys?: boolean;            // case-insensitive key matching. (default: false)
+    partialMatch?: boolean;      // substring match for keys. (default: false)
+    maskMapKeys?: boolean;       // also mask Map keys. (default: false)
+    maskTypedArrays?: boolean;   // replace typed arrays with placeholders. (default: false)
+    includeInherited?: boolean;  // include inherited enumerable keys. (default: false)
+    includeSymbols?: boolean;    // include symbol keys; default false for speed
+    getterErrorValue?: string;   // value to use when a getter throws. (default: '[GetterError]')
+    maxDepth?: number;           // max recursion depth; 0 = only root. (default: 8)
+    maxNodes?: number;           // max visited nodes to avoid pathological graphs. (default: 50_000)
 };
 ```
 
@@ -238,7 +235,7 @@ const formatter = createConsoleFormatter('auto'); // 'off' | 'auto' | 'on'
 ### 1️⃣ Custom sinks for embedded apps
 
 ```ts
-const { logger } = createLogger({
+const log = createLogger({
   sinks: { error: Homey.error, info: Homey.log },
   warnFallback: 'error'
 });
@@ -247,14 +244,14 @@ const { logger } = createLogger({
 ### 2️⃣ No-op logger
 
 ```ts
-const { logger } = createLogger({ sinks: null });
+const logger = createLogger({ sinks: null });
 logger.debug('not printed');
 ```
 
 ### 3️⃣ Child logger with static tags
 
 ```ts
-const base = createLogger().logger;
+const base = createLogger();
 const api = base.child({ svc: 'api' });
 api.info('Listening', { port: 8080 });
 // { svc: 'api', port: 8080 }
@@ -264,7 +261,7 @@ api.info('Listening', { port: 8080 });
 
 ```ts
 import { createConsoleFormatter } from 'log-sm/format';
-createLogger({ consoleFormatter: createConsoleFormatter('on') });
+const log = createLogger({ consoleFormatter: createConsoleFormatter('on') });
 ```
 
 ---
@@ -306,8 +303,7 @@ No peer dependencies. TypeScript types included.
 
 ## 🧬 License
 
-MIT — © 2025 Huy Nguyen  
-<https://huynguyen.net>
+MIT — © 2025 [HuySrc](https://huynguyen.net)
 
 ---
 
@@ -315,7 +311,7 @@ MIT — © 2025 Huy Nguyen
 
 See more practical patterns for customizing and extending **log-sm** without changing the core:
 
-- [**USE_CASES.md**](./USE_CASES.md) — common real-world usage:
+- [**USE_CASES.md**](./USE_CASES.md) — common real-world usages:
     - error input policies, console/custom sinks, JSON logging, redaction, deduplication, tags, and runtime debug.
 - [**USE_CASES_ADV.md**](./USE_CASES_ADV.md) — advanced production patterns:
     - filtering by message pattern, grouped console logs, global error capture, remote debug toggles, performance timing, and bridging to external loggers.

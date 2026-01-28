@@ -24,39 +24,37 @@
 **A) Mark fatal via payload (queryable downstream)**
 
 ```ts
-import {createLogger} from "./log-sm";
+const log = createLogger({
+    sinks: {
+        error: (msg: string, data?: any) => {
+            // Write to stderr (or forward sang collector)
+            console.error(msg, data);
 
-const sinks = {
-  error: (msg: string, data?: any) => {
-    // Write to stderr (or forward sang collector)
-    console.error(msg, data);
+            const isFatal = data?.severity === 'fatal' || data?.severity === 'critical';
+            if (!isFatal) return;
 
-    const isFatal = data?.severity === 'fatal' || data?.severity === 'critical';
-    if (!isFatal) return;
-        
-    // Optional: Send alert before exit
-    try {
-      if (data?.action === 'alert') {
-        // Example: call webhook PagerDuty/Slack (sync, short timeout)
-      }
-    } catch {}
+            // Optional: Send alert before exit
+            try {
+                if (data?.action === 'alert') {
+                    // Example: call webhook PagerDuty/Slack (sync, short timeout)
+                }
+            } catch {}
 
-    // Exit if requested (Node-only)
-    if (data?.action === 'exit' && typeof process !== 'undefined') {
-      // (optional) flush metric/log buffers…
-      process.exit(1);
+            // Exit if requested (Node-only)
+            if (data?.action === 'exit' && typeof process !== 'undefined') {
+                // (optional) flush metric/log buffers…
+                process.exit(1);
+            }
+        },
+        info:  (m, d) => console.log(m, d),
+        debug: (m, d) => console.debug(m, d),
     }
-  },
-  info:  (m, d) => console.log(m, d),
-  debug: (m, d) => console.debug(m, d),
-};
-
-const logger = createLogger({ sinks }).logger;
+});
 ```
 
 ```ts
 // Log a fatal error using structured metadata
-logger.error('Cannot load signing key from KMS', {
+log.error('Cannot load signing key from KMS', {
     severity: 'fatal',
     action: 'exit',
     component: 'payments-bootstrap',
@@ -66,7 +64,7 @@ logger.error('Cannot load signing key from KMS', {
 ```
 
 ```ts
-const sys = logger.child({ component: 'bootstrap' });
+const sys = log.child({ component: 'bootstrap' });
 sys.error('Missing ENV', { severity: 'fatal', action: 'exit' });
 ```
 
@@ -83,12 +81,12 @@ function fatalSink(inner: (m: string, d?: unknown) => void) {
   };
 }
 
-const logger = createLogger({
+const log = createLogger({
   sinks: {
     error: fatalSink(console.error), // treat ALL error() as fatal
     // or: only fatal when payload.severity === 'fatal'
   },
-}).logger;
+});
 ```
 
 **C) Fatal handling in browser or edge runtime**
