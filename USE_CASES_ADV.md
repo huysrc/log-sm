@@ -170,7 +170,7 @@ function makeFilter(
 // Example: only log INFO messages that contain "user:"
 const log = createLogger({
   sinks: {
-    info: makeFilter(/user:/, console.info, { allow: true }),
+    info: makeFilter(/user:/, console.info),
     error: console.error,
     debug: console.debug,
   },
