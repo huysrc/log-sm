@@ -5,22 +5,30 @@
 
 ## Table of Contents
 
-15. [FATAL patterns (without a FATAL level)](#15-fatal-patterns-without-a-fatal-level)
-16. [Filter / silence by message pattern](#16-filter--silence-by-message-pattern)
-17. [Console grouping / nested views (browser devtools)](#17-console-grouping--nested-views-browser-devtools)
-18. [Capture unhandled rejections & uncaught exceptions](#18-capture-unhandled-rejections--uncaught-exceptions)
-19. [Remote DEBUG toggle via signal / runtime switch](#19-remote-debug-toggle-via-signal--runtime-switch)
-20. [Structured performance / timing logs](#20-structured-performance--timing-logs)
-21. [Bridge to external loggers (pino/winston)](#21-bridge-to-external-loggers-pinowinston)
-22. [Deep redaction with guards (Map/Set/TypedArray/cycles)](#22-deep-redaction-with-guards-mapsettypedarraycycles)
-23. [Console formatter adapter (format.ts → core ConsoleFormatter)](#23-console-formatter-adapter)
+15. [FATAL patterns (without a FATAL level)](#15-fatal-patterns-without-a-fatal-level-)
+    - [Mark fatal via payload (queryable downstream)](#a-mark-fatal-via-payload-queryable-downstream-)
+    - [Fatal sink that terminates the process (Node)](#b-fatal-sink-that-terminates-the-process-node-)
+    - [Fatal handling in browser or edge runtime](#c-fatal-handling-in-browser-or-edge-runtime-)
+    - [Throw after logging (call-site)](#d-throw-after-logging-call-site-)
+16. [Filter / silence by message pattern](#16-filter--silence-by-message-pattern-)
+17. [Console grouping / nested views (browser devtools)](#17-console-grouping--nested-views-browser-devtools-)
+18. [Capture unhandled rejections & uncaught exceptions](#18-capture-unhandled-rejections--uncaught-exceptions-)
+19. [Remote DEBUG toggle via signal / runtime switch](#19-remote-debug-toggle-via-signal--runtime-switch-)
+    - [Toggle debug window on SIGUSR2 (Node)](#a-toggle-debug-window-on-sigusr2-node-)
+    - [HTTP/admin endpoint toggles debug (server)](#b-httpadmin-endpoint-toggles-debug-server-)
+20. [Structured performance / timing logs](#20-structured-performance--timing-logs-)
+21. [Bridge to external loggers (pino/winston)](#21-bridge-to-external-loggers-pinowinston-)
+22. [Deep redaction with guards (Map/Set/TypedArray/cycles)](#22-deep-redaction-with-guards-mapsettypedarraycycles-)
+    - [Default mask keys](#a-default-mask-keys-)
+    - [Case-insensitive + partial match](#b-case-insensitive--partial-match-)
+    - [Mask Map keys + TypedArray](#c-mask-map-keys--typedarray-)
 
 
-## 15. FATAL patterns (without a FATAL level)
+## 15. FATAL patterns (without a FATAL level) [📖](#table-of-contents)
 
 > `log-sm` keeps base gating (`ERROR/INFO/DEBUG`) and a separate `warn()` gate via `warnLevel`. You can model *fatal* semantics at the sink or call site.
 
-### A) Mark fatal via payload (queryable downstream)
+### A) Mark fatal via payload (queryable downstream) [📖](#table-of-contents)
 
 ```ts
 import { createLogger } from 'log-sm';
@@ -60,7 +68,7 @@ const sys = log.withTags({ component: 'bootstrap' });
 sys.error('Missing ENV', { severity: 'fatal', action: 'exit' });
 ```
 
-**B) Fatal sink that terminates the process (Node)**
+### B) Fatal sink that terminates the process (Node) [📖](#table-of-contents)
 
 ```ts
 function fatalSink(inner: (m: string, d?: unknown) => void) {
@@ -81,7 +89,7 @@ const log = createLogger({
 });
 ```
 
-**C) Fatal handling in browser or edge runtime**
+### C) Fatal handling in browser or edge runtime [📖](#table-of-contents)
 
 ```ts
 // Sink implementation for browser / Homey / Edge
@@ -124,7 +132,7 @@ const sinksBrowser = {
 </script>
 ```
 
-**D) Throw after logging (call-site)**
+### D) Throw after logging (call-site) [📖](#table-of-contents)
 
 ```ts
 try {
@@ -143,7 +151,7 @@ try {
 - In browsers, consider UX (show message / overlay) before reload.
 
 
-## 16. Filter / silence by message pattern
+## 16. Filter / silence by message pattern [📖](#table-of-contents)
 
 > Dynamically suppress or allow logs by message regex, without rebuilding the core logger.
 
@@ -173,7 +181,7 @@ const log = createLogger({
 ```
 
 
-## 17. Console grouping / nested views (browser devtools)
+## 17. Console grouping / nested views (browser devtools) [📖](#table-of-contents)
 
 > Make complex payloads easier to inspect in the browser or Node-compatible consoles.
 
@@ -202,7 +210,7 @@ const log = createLogger({ sinks, level: 'debug' });
 ```
 
 
-## 18. Capture unhandled rejections & uncaught exceptions
+## 18. Capture unhandled rejections & uncaught exceptions [📖](#table-of-contents)
 
 > Wire Node global events to the logger so you never miss critical failures.
 
@@ -231,12 +239,12 @@ if (typeof process !== 'undefined' && typeof process.on === 'function') {
 *Tip:* Keep handlers resilient—never throw from them.
 
 
-## 19. Remote DEBUG toggle via signal / runtime switch
+## 19. Remote DEBUG toggle via signal / runtime switch [📖](#table-of-contents)
 
 > Temporarily enable verbose logs on a live instance without redeploying.
 > Prefer using the built-in debugForMs() instead of recreating the logger.
 
-**A) Toggle debug window on SIGUSR2 (Node)**
+### A) Toggle debug window on SIGUSR2 (Node) [📖](#table-of-contents)
 ```ts
 import { createLogger } from 'log-sm';
 
@@ -251,7 +259,7 @@ if (typeof process !== 'undefined' && typeof process.on === 'function') {
 }
 ```
 
-**B) HTTP/admin endpoint toggles debug (server)**
+### B) HTTP/admin endpoint toggles debug (server) [📖](#table-of-contents)
 ```ts
 // Pseudo example:
 app.post('/admin/debug', (req, res) => {
@@ -266,7 +274,7 @@ app.post('/admin/debug', (req, res) => {
 ```
 
 
-## 20. Structured performance / timing logs
+## 20. Structured performance / timing logs [📖](#table-of-contents)
 
 > Include cheap timing markers without external libs.
 
@@ -300,7 +308,7 @@ async function withTimingAsync<T>(name: string, f: () => Promise<T>) {
 ```
 
 
-## 21. Bridge to external loggers (pino/winston)
+## 21. Bridge to external loggers (pino/winston) [📖](#table-of-contents)
 
 > Keep `log-sm` for tiny core & API, but ship logs via an existing logger ecosystem.
 
@@ -341,7 +349,7 @@ const log = createLogger({
 ```
 
 
-## 22. Deep redaction with guards (Map/Set/TypedArray/cycles)
+## 22. Deep redaction with guards (Map/Set/TypedArray/cycles) [📖](#table-of-contents)
 
 `log-sm/redact` supports deep redaction with:
 - cycle guard (`[Circular]`)
@@ -350,7 +358,7 @@ const log = createLogger({
 - Map/Set handling
 - optional masking Map keys, typed arrays, inherited keys, symbol keys
 
-**A) Default mask keys**
+### A) Default mask keys [📖](#table-of-contents)
 ```ts
 import { createLogger } from 'log-sm';
 import { makeMask } from 'log-sm/redact';
@@ -370,7 +378,7 @@ log.info('login', {
 });
 ```
 
-**B) Case-insensitive + partial match**
+### B) Case-insensitive + partial match [📖](#table-of-contents)
 ```ts
 import { makeMask } from 'log-sm/redact';
 
@@ -382,7 +390,7 @@ const mask = makeMask(['token', 'password'], {
 const log = createLogger({ mask });
 ```
 
-**C) Mask Map keys + TypedArray**
+### C) Mask Map keys + TypedArray [📖](#table-of-contents)
 ```ts
 import { makeMask } from 'log-sm/redact';
 
@@ -399,37 +407,5 @@ log.info('payload', {
     ['x-api-key', '123'],
   ]),
   bytes: new Uint8Array(10_000),
-});
-```
-
-
-## 23. Console formatter adapter
-
-`log-sm` expects a formatter returning `{ msg, data? }`, so keep the payload structured (recommended)
-```ts
-import { createLogger } from 'log-sm';
-import { createConsoleFormatter } from 'log-sm/format';
-
-const line = createConsoleFormatter('auto');
-
-const log = createLogger({
-  consoleFormatter: (level, msg, data) => ({
-    msg: line(level, msg), // format only the prefix + msg
-    data,                  // keep payload structured
-  }),
-});
-
-log.info('hello', { a: 1 });
-```
-
-Or embed JSON into message (payload omitted)
-```ts
-const line = createConsoleFormatter('auto');
-
-const log = createLogger({
-  consoleFormatter: (level, msg, data) => ({
-    msg: line(level, msg, data), // format includes JSON
-    data: undefined,
-  }),
 });
 ```

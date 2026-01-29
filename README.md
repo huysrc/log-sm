@@ -63,7 +63,7 @@ log.debug('details', { a: 1 });
 - 🧮 **Type-Safe** – written in pure TypeScript, Node/browser compatible.
 
 
-## 🧱 Philosophy
+## 🧠 Philosophy
 
 > 🧦 “Factory-only” design — configuration resolved once, runtime is pure direct call.
 
@@ -76,9 +76,8 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 - No globals, no side effects.
 - Fully composable (`child()`, custom sinks).
 
----
 
-## Levels & WARN policy
+## 🧱 Levels & WARN policy
 
 **log-sm** has base gating levels:
 - `NONE` (`0`)
@@ -86,14 +85,14 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 - `INFO` (`2`)
 - `DEBUG` (`3`)
 
-But _WARN_ is special:
+⚠️ But _WARN_ is special:
 - `warn()` is gated by `warnLevel` (default: `error`)
 - This means WARN can still be visible even when base `level === 'error'`
 
 In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
 This approach keeps level gating simple, predictable, and expressive.
 
-### Example:
+### 🦾 Example:
 ```ts
 const log = createLogger({ level: 'error' }); // base gate: error
 log.warn('this is visible by default');       // because warnLevel defaults to 'error'
@@ -107,7 +106,7 @@ const log = createLogger({ level: 'error', warnLevel: 'info' });
 log.warn('not visible now');
 ```
 
-## Level resolution from `env`
+### 🧬 Level resolution from `env`
 
 If `CreateLoggerOptions.level` is omitted, base level is resolved by:
  1. `DEBUG_MODE=1|true|yes|on` (case-insensitive) → `debug`
@@ -121,9 +120,9 @@ You can provide `options.env` (recommended for tests / browser / SSR) instead of
 
 ---
 
-## 🦭 createLogger(options)
+## 🦭 Logger API (`log-sm`)
 
-### Options overview
+### 🧮 Options Overview (`createLogger(options)`)
 
 ```ts
 export type CreateLoggerOptions = {
@@ -190,23 +189,27 @@ Custom `sinks.*` take precedence over `consoleFormatter`.
 | `prodDefault`      | Override prod default level                 | `error`           |
 
 ### ⚙️ Console formatter
-#### Correct signature
 
-In `core.ts`:
+`consoleFormatter` lets you customize how logs are printed **when using the built-in console fallback**.
+
+A formatter must return an object in the shape:
+
+- `msg`: the final string to print
+- `data` (optional): structured payload for `console` to render nicely (recommended)
 
 ```ts
-export interface ConsoleFormatter {
-    (level: 'error' | 'warn' | 'info' | 'debug', msg: string, data?: unknown): { msg: string; data?: unknown };
-}
+type ConsoleFormatter = (
+    level: 'error' | 'warn' | 'info' | 'debug',
+    msg: string,
+    data: unknown
+) => { msg: string; data?: unknown };
 ```
 
-So a formatter must return `{ msg, data }`.
+>Tip: format the message only and keep `data` structured, so the console can inspect/expand objects.
 
-#### Using `format.ts` helper (adapter)
+#### 👉 Recommended: format the message only, keep payload structured
 
-`format.ts` provides `createConsoleFormatter(colorMode)` which returns a function that formats a single string line.
-
-To use it with `core.ts`, wrap it like this:
+Use `createConsoleFormatter()` from `log-sm/format` to build a "line formatter", then wrap it into `consoleFormatter`:
 ```ts
 import { createLogger } from 'log-sm';
 import { createConsoleFormatter } from 'log-sm/format';
@@ -215,24 +218,36 @@ const line = createConsoleFormatter('auto');
 
 const log = createLogger({
   consoleFormatter: (level, msg, data) => ({
-    msg: line(level, msg, data),
-    // We already embedded JSON into msg above, so skip structured payload:
-    data: undefined,
+    msg: line(level, msg),
+    data,
   }),
 });
+
+log.info('hello', { a: 1 });
 ```
 
-If you want to keep a structured payload (recommended for devtools), do:
+#### 👉 Alternative: embed payload into the message (omit `data`)
+
+If you want a single text line (e.g. for systems that only accept strings), you can embed the payload into `msg` and omit `data`:
+
 ```ts
+import { createLogger } from 'log-sm';
+import { createConsoleFormatter } from 'log-sm/format';
+
 const line = createConsoleFormatter('auto');
 
 const log = createLogger({
   consoleFormatter: (level, msg, data) => ({
-    msg: line(level, msg), // no JSON here
-    data,                  // keep payload structured
+    msg: line(level, msg, data), // formatter includes payload text/JSON
+    data: undefined,             // omit structured payload
   }),
 });
 ```
+
+#### Notes
+- `consoleFormatter` applies only to the console fallback. If you provide custom sinks (`sinks.info`,
+  `sinks.error`, ...), formatting should be handled in those sinks.
+- For redaction/truncation, prefer using `mask/truncate` options and keep `consoleFormatter` focused on presentation.
 
 ### ⚙️ Error logging behavior
 `error()` accepts:
@@ -266,13 +281,13 @@ log.info('login', { user: 'a', password: 'secret', token: 'abc', bio: '...' });
 
 ### ⚙️ Tags, withTags(), child()
 
-#### Static tags
+#### 🔹 Static tags
 ```ts
 const log = createLogger({ tags: { service: 'api', env: 'prod' } });
 log.info('started', { port: 8080 }); // payload includes service/env
 ```
 
-#### withTags()
+#### 🔹 withTags()
 ```ts
 const log = createLogger();
 const auth = log.withTags({ module: 'auth' });
@@ -280,7 +295,7 @@ const auth = log.withTags({ module: 'auth' });
 auth.warn('invalid credentials', { userId: 123 });
 ```
 
-#### child()
+#### 🔹 child()
 `child()` shallow-merges options (`{...parentOpts, ...childOpts}`).
 ```ts
 const log = createLogger({ level: 'info' });
@@ -291,7 +306,7 @@ noisy.debug('enabled here');
 
 ### ⚙️ Runtime overrides
 
-#### debugForMs(ms)
+#### 🔹 debugForMs(ms)
 Enables a temporary debug window without changing level:
 ```ts
 const log = createLogger({ level: 'error' });
@@ -303,7 +318,7 @@ log.info('also visible during window');
 stop(); // end early (idempotent)
 ```
 
-#### withLevel(level, fn)
+#### 🔹 withLevel(level, fn)
 Scoped override for sync/async:
 ```ts
 await log.withLevel('debug', async (l) => {
@@ -311,7 +326,7 @@ l.debug('inside scope');
 });
 ```
 
-#### withLevelTimed(level, ms)
+#### 🔹 withLevelTimed(level, ms)
 ```ts
 const dispose = log.withLevelTimed('debug', 5000);
 dispose(); // end early
@@ -338,16 +353,16 @@ import { makeMask, redact, extendDefaultMaskKeys } from 'log-sm/redact';
 ### RedactOptions
 ```ts
 export type RedactOptions = {
-    mask?: string;               // replace value for matching keys. (default: '***')
-    ciKeys?: boolean;            // case-insensitive key matching. (default: false)
-    partialMatch?: boolean;      // substring match for keys. (default: false)
-    maskMapKeys?: boolean;       // also mask Map keys. (default: false)
-    maskTypedArrays?: boolean;   // replace typed arrays with placeholders. (default: false)
-    includeInherited?: boolean;  // include inherited enumerable keys. (default: false)
-    includeSymbols?: boolean;    // include symbol keys; default false for speed
-    getterErrorValue?: string;   // value to use when a getter throws. (default: '[GetterError]')
-    maxDepth?: number;           // max recursion depth; 0 = only root. (default: 8)
-    maxNodes?: number;           // max visited nodes to avoid pathological graphs. (default: 50_000)
+  mask?: string;               // replace value for matching keys. (default: '***')
+  ciKeys?: boolean;            // case-insensitive key matching. (default: false)
+  partialMatch?: boolean;      // substring match for keys. (default: false)
+  maskMapKeys?: boolean;       // also mask Map keys. (default: false)
+  maskTypedArrays?: boolean;   // replace typed arrays with placeholders. (default: false)
+  includeInherited?: boolean;  // include inherited enumerable keys. (default: false)
+  includeSymbols?: boolean;    // include symbol keys; default false for speed
+  getterErrorValue?: string;   // value to use when a getter throws. (default: '[GetterError]')
+  maxDepth?: number;           // max recursion depth; 0 = only root. (default: 8)
+  maxNodes?: number;           // max visited nodes to avoid pathological graphs. (default: 50_000)
 };
 ```
 
@@ -376,9 +391,9 @@ export type RedactOptions = {
 **Q:** Will it break on BigInt or circular objects?  
 **A:** No — built-in formatters are JSON-safe and circular-tolerant.
 
-## 🧬 License
+## 🔒 License
 
-MIT — © 2025 [HuySrc](https://huynguyen.net)
+MIT — © 2026 [HuySrc](https://huynguyen.net)
 
 ## 📘 More Examples & Recipes
 

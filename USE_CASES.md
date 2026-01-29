@@ -5,25 +5,25 @@
 
 ## Table of Contents
 
-1. [Error input policy](#1-error-input-policy)
-2. [Console vs. custom sinks](#2-console-vs-custom-sinks)
-3. [Wrap error under `error:{}`](#3-wrap-error-under-error)
-4. [Drop stack traces in production](#4-drop-stack-traces-in-production-keep-them-in-dev)
-5. [OpenTelemetry mapping](#5-map-to-opentelemetry-exception-semantic-keys)
-6. [Emit JSON lines](#6-emit-json-lines-one-line-for-ingestion)
-7. [Redaction and truncation](#7-redaction-and-truncation)
-8. [Normalize mixed error sources](#8-normalize-mixed-error-sources)
-9. [Tag merge policies](#9-tag-merge-policies)
-10. [WARN routing](#10-warn-routing)
-11. [Runtime debug toggle](#11-runtime-debug-toggle-opt-in)
-12. [Per-sink deduplicate / rate-limit](#12-per-sink-deduplicate--rate-limit)
-13. [Multi-transport fan-out](#13-multi-transport-fan-out)
-14. [Browser usage (bundlers & CDN)](#14-browser-usage-bundlers--cdn)
-15. [Homey examples](#15-homey-examples)
-16. [Guidelines](#16-guidelines)
+1. [Error input policy](#1-error-input-policy-)
+2. [Console vs. custom sinks](#2-console-vs-custom-sinks-)
+3. [Wrap error under `error:{}`](#3-wrap-error-under-error-)
+4. [Drop stack traces in production](#4-drop-stack-traces-in-production-keep-them-in-dev-)
+5. [OpenTelemetry mapping](#5-map-to-opentelemetry-exception-semantic-keys-)
+6. [Emit JSON lines](#6-emit-json-lines-one-line-for-ingestion-)
+7. [Redaction and truncation](#7-redaction-and-truncation-)
+8. [Normalize mixed error sources](#8-normalize-mixed-error-sources-)
+9. [Tag merge policies](#9-tag-merge-policies-)
+10. [WARN routing](#10-warn-routing-)
+11. [Runtime debug toggle](#11-runtime-debug-toggle-opt-in-)
+12. [Per-sink deduplicate / rate-limit](#12-per-sink-deduplicate--rate-limit-)
+13. [Multi-transport fan-out](#13-multi-transport-fan-out-)
+14. [Browser usage (bundlers & CDN)](#14-browser-usage-bundlers--cdn-)
+15. [Homey examples](#15-homey-examples-)
+16. [Guidelines](#16-guidelines-)
 
 
-## 1. Error input policy
+## 1. Error input policy [📖](#table-of-contents)
 
 ```ts
 // 1) Default: 'ifNonError'
@@ -41,7 +41,7 @@ createLogger({ errorInputPolicy: 'never' });
 Use when you need or don’t need the raw input attached beside normalized Error.
 
 
-## 2. Console vs. custom sinks
+## 2. Console vs. custom sinks [📖](#table-of-contents)
 
 ```ts
 // A) Console only (pretty dev output)
@@ -88,7 +88,7 @@ createLogger({
 > Works automatically for all console fallback sinks (no custom sinks provided).
 
 
-## 3. Wrap error under `error:{}`
+## 3. Wrap error under `error:{}` [📖](#table-of-contents)
 
 ```ts
 /** Wrap flat error fields under `error:{...}` for backend schema consistency. */
@@ -110,7 +110,7 @@ const log = createLogger({ sinks });
 ```
 
 
-## 4. Drop stack traces in production, keep them in dev
+## 4. Drop stack traces in production, keep them in dev [📖](#table-of-contents)
 
 ```ts
 /** Remove `stack` in production to reduce noise/PII risk. */
@@ -129,7 +129,7 @@ const log = createLogger({ sinks });
 ```
 
 
-## 5. Map to OpenTelemetry exception semantic keys
+## 5. Map to OpenTelemetry exception semantic keys [📖](#table-of-contents)
 
 ```ts
 /** Map normalized error to OTel-like keys for better cross-tooling. */
@@ -153,7 +153,7 @@ const log = createLogger({ sinks });
 ```
 
 
-## 6. Emit JSON lines (one-line) for ingestion
+## 6. Emit JSON lines (one-line) for ingestion [📖](#table-of-contents)
 
 ```ts
 /** Emit newline-delimited JSON for file shippers (vector/fluent-bit). */
@@ -171,7 +171,7 @@ const log = createLogger({
 ```
 
 
-## 7. Redaction and truncation
+## 7. Redaction and truncation [📖](#table-of-contents)
 
 Prefer using the built-in `mask` + `truncate` options (fast, predictable), and keep transports thin.
 
@@ -193,7 +193,7 @@ log.error(new Error('boom'), { authorization: 'Bearer ...' });
 ```
 
 
-## 8. Normalize mixed error sources
+## 8. Normalize mixed error sources [📖](#table-of-contents)
 
 ```ts
 /** Keep only whitelisted fields for easy querying. */
@@ -212,7 +212,7 @@ const log = createLogger({ sinks });
 ```
 
 
-## 9. Tag merge policies
+## 9. Tag merge policies [📖](#table-of-contents)
 
 Tags are static key-values merged into structured `data` on every call.
 
@@ -237,7 +237,7 @@ const base2 = createLogger({ mergeTagsPolicy: 'tagsWin' });
 ```
 
 
-## 10. WARN routing
+## 10. WARN routing [📖](#table-of-contents)
 
 `warn()` has its own gate: `warnLevel` (default: `ERROR`).  
 If you want conventional behavior (WARN shows up only when base level is INFO+), set `warnLevel: INFO`.
@@ -257,7 +257,7 @@ const log = createLogger({
 ```
 
 
-## 11. Runtime DEBUG toggle (opt-in)
+## 11. Runtime DEBUG toggle (opt-in) [📖](#table-of-contents)
 
 Use `debugForMs()` (doesn't change base `level`) or `withLevelTimed()` (temporarily changes `level`).
 
@@ -280,7 +280,7 @@ log.withLevelTimed(LogLevel.DEBUG, 30_000);
 ```
 
 
-## 12. Per-sink deduplicate / rate-limit
+## 12. Per-sink deduplicate / rate-limit [📖](#table-of-contents)
 
 ```ts
 /** Drop identical error messages if they repeat too fast. */
@@ -305,7 +305,7 @@ const log = createLogger({ sinks });
 ```
 
 
-## 13. Multi-transport fan-out
+## 13. Multi-transport fan-out [📖](#table-of-contents)
 
 ```ts
 /** Fan-out to file + http simultaneously, without blocking the core path. */
@@ -325,7 +325,7 @@ const log = createLogger({
 ```
 
 
-## 14. Browser usage (bundlers & CDN)
+## 14. Browser usage (bundlers & CDN) [📖](#table-of-contents)
 
 **A) Bundlers (Vite/Webpack/Rspack/Parcel)**
 
@@ -361,7 +361,7 @@ log.error(new Error('boom'));
 - Perf: avoid heavy `JSON.stringify` on circular objects; keep payloads lean.
 
 
-## 15. Homey examples
+## 15. Homey examples [📖](#table-of-contents)
 
 ```ts
 // Reuse Homey sinks
@@ -375,7 +375,7 @@ createLogger({
 ```
 
 
-## 16. Guidelines
+## 16. Guidelines [📖](#table-of-contents)
 
 - The **core** handles levels, tags, and minimal error normalization.
 - All shaping, masking, routing, dedup, or transformation should be done **in sinks**.
@@ -412,7 +412,7 @@ extract it into a small helper module or shareable sink preset,
     Also remember: sink routing (`sinks.warn`) is independent from level gating.
 
 - **“Stack trace missing in production.”**  
-  → Ensure your sink isn’t stripping it (see [UC-4](#4-drop-stack-traces-in-production-keep-them-in-dev)).  
+  → Ensure your sink isn’t stripping it (see [UC-4](#4-drop-stack-traces-in-production-keep-them-in-dev-)).  
   Also check that your `StackPolicy` (if used) isn’t set to `'never'`.
 
 - **“Formatter colors aren’t visible.”**  
