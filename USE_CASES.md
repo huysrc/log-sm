@@ -3,8 +3,6 @@
 > Practical examples for customizing and extending **log-sm**
 > without adding complexity to the core.
 
----
-
 ## Table of Contents
 
 1. [Error input policy](#1-error-input-policy)
@@ -20,16 +18,15 @@
 11. [Runtime debug toggle](#11-runtime-debug-toggle-opt-in)
 12. [Per-sink deduplicate / rate-limit](#12-per-sink-deduplicate--rate-limit)
 13. [Multi-transport fan-out](#13-multi-transport-fan-out)
-14. [Browser usage (bundlers & CDN](#14-browser-usage-bundlers--cdn)
+14. [Browser usage (bundlers & CDN)](#14-browser-usage-bundlers--cdn)
 15. [Homey examples](#15-homey-examples)
 16. [Guidelines](#16-guidelines)
 
----
 
 ## 1. Error input policy
 
 ```ts
-// 1) Default: 'auto'
+// 1) Default: 'ifNonError'
 // - Error input: only normalized error (no {input})
 // - Non-error input: add {input: value}
 createLogger();
@@ -43,7 +40,6 @@ createLogger({ errorInputPolicy: 'never' });
 
 Use when you need or don’t need the raw input attached beside normalized Error.
 
----
 
 ## 2. Console vs. custom sinks
 
@@ -51,8 +47,9 @@ Use when you need or don’t need the raw input attached beside normalized Error
 // A) Console only (pretty dev output)
 createLogger({
     level: LogLevel.DEBUG,
-    consoleFormatter: (level, msg, data) =>
-        `[${level}] ${msg}${data ? ' ' + JSON.stringify(data) : ''}`,
+    consoleFormatter: (level, msg, data) => {
+        return { msg: `[${level}] ${msg}`, data}
+    }
 });
 
 // B) Custom sinks (ship JSON to your transport)
@@ -70,8 +67,9 @@ createLogger({
 
 ```ts
 // Console: Custom Color + Timestamp Formatter
+// Tip: return `data` as-is (let the console render objects) instead of JSON.stringify.
 createLogger({
-    consoleFormatter: (level: string, msg: string, data?: any) => {
+    consoleFormatter: (level, msg, data) => {
         const c = {
             error: '\x1b[31m', // red
             warn:  '\x1b[33m', // yellow
@@ -80,8 +78,8 @@ createLogger({
         }[level];
         const reset = '\x1b[0m';
         const ts = new Date().toISOString();
-        return `${c}${ts} [${level.toUpperCase()}] ${msg}${reset}` +
-            (data ? ' ' + JSON.stringify(data) : '');
+        const line = `${c}${ts} [${level.toUpperCase()}] ${msg}${reset}`;
+        return data === undefined ? { msg: line } : { msg: line, data };
     },
 });
 ```
@@ -89,7 +87,6 @@ createLogger({
 > Produces colored, timestamped output in Node terminals.  
 > Works automatically for all console fallback sinks (no custom sinks provided).
 
----
 
 ## 3. Wrap error under `error:{}`
 
@@ -112,7 +109,6 @@ const sinks = {
 const log = createLogger({ sinks });
 ```
 
----
 
 ## 4. Drop stack traces in production, keep them in dev
 
@@ -132,7 +128,6 @@ const sinks = {
 const log = createLogger({ sinks });
 ```
 
----
 
 ## 5. Map to OpenTelemetry exception semantic keys
 
@@ -157,48 +152,46 @@ const sinks = {
 const log = createLogger({ sinks });
 ```
 
----
 
 ## 6. Emit JSON lines (one-line) for ingestion
 
 ```ts
 /** Emit newline-delimited JSON for file shippers (vector/fluent-bit). */
-const toLine = (lvl: string, msg: string, d?: unknown) =>
-  JSON.stringify({ t: Date.now(), lvl, msg, ...(d || {}) });
+const toLine = (lvl: string, msg: string, data?: unknown) =>
+  JSON.stringify({ t: Date.now(), lvl, msg, data });
 
 const log = createLogger({
   sinks: {
     error: (m, d) => process.stdout.write(toLine('error', m, d) + '\n'),
-    info:  (m, d) => process.stdout.write(toLine('info', m, d) + '\n'),
+    warn:  (m, d) => process.stdout.write(toLine('warn',  m, d) + '\n'),
+    info:  (m, d) => process.stdout.write(toLine('info',  m, d) + '\n'),
     debug: (m, d) => process.stdout.write(toLine('debug', m, d) + '\n'),
   },
 });
 ```
 
----
 
 ## 7. Redaction and truncation
 
+Prefer using the built-in `mask` + `truncate` options (fast, predictable), and keep transports thin.
+
 ```ts
-/** Minimal example; replace with your own efficient redactor. */
-const redact = (o: any) => {
-    if (!o || typeof o !== 'object') return o;
-    if ('password' in o) o.password = '***';
-    if ('token' in o) o.token = '***';
-    return o;
-};
+// Example uses the helper in `redact.ts` (recommended) to build a reusable mask function.
+import { createLogger } from 'log-sm';
+import { makeMask } from 'log-sm/redact';
 
-const truncate = (s: string, n = 8192) => (s.length > n ? s.slice(0, n) + '…' : s);
+const log = createLogger({
+  // Redact common secrets (password/token/authorization/...), deep + cycle-safe.
+  mask: makeMask(), // defaults to DEFAULT_MASK_KEYS
+  // Shallow-truncate long string fields (and normalized error fields) per property.
+  truncate: 8192,
+});
 
-const sinks = {
-    error: (m, d) => console.error(m, JSON.parse(truncate(JSON.stringify(redact(d ?? {}))))),
-    info:  (m, d) => console.info (m, JSON.parse(truncate(JSON.stringify(redact(d ?? {}))))),
-};
-
-const log = createLogger({ sinks });
+// This will be masked + truncated before it reaches sinks/console.
+log.info('login', { user: 'alice', password: 'super-secret', token: 'abc...' });
+log.error(new Error('boom'), { authorization: 'Bearer ...' });
 ```
 
----
 
 ## 8. Normalize mixed error sources
 
@@ -218,17 +211,21 @@ const sinks = {
 const log = createLogger({ sinks });
 ```
 
----
 
 ## 9. Tag merge policies
 
+Tags are static key-values merged into structured `data` on every call.
+
 ```ts
-// Assume your logger supports child tags and a merge policy.
-const base = createLogger({ /* mergeTagsPolicy: 'dataWins' (default) */ });
+import { createLogger } from 'log-sm';
 
-const srv = base.child({ srv: 'billing', region: 'us-west' });
+// Default: dataWins => `{ ...tags, ...data }`
+const base = createLogger({ /* mergeTagsPolicy: 'dataWins' */ });
 
-// dataWins: when keys collide, data overwrites tags
+// Add tags via withTags(...)
+const srv = base.withTags({ srv: 'billing', region: 'us-west' });
+
+// dataWins: when keys collide, `data` overwrites `tags`
 srv.info('charge ok', { region: 'us-east', amount: 12.3 });
 // -> { srv:'billing', region:'us-east', amount:12.3 }
 ```
@@ -236,74 +233,77 @@ srv.info('charge ok', { region: 'us-east', amount: 12.3 });
 If you prefer tags to win:
 
 ```ts
-const base = createLogger({ mergeTagsPolicy: 'tagsWin' });
+const base2 = createLogger({ mergeTagsPolicy: 'tagsWin' });
 ```
 
----
 
 ## 10. WARN routing
 
+`warn()` has its own gate: `warnLevel` (default: `ERROR`).  
+If you want conventional behavior (WARN shows up only when base level is INFO+), set `warnLevel: INFO`.
+
 ```ts
+import { createLogger, LogLevel } from 'log-sm';
+
 const log = createLogger({
-    level: LogLevel.INFO,     // WARN visible at INFO+
+    level: LogLevel.INFO,        // base gate for error/info/debug
+    warnLevel: LogLevel.INFO,    // WARN visible only when base gate is INFO+
     sinks: {
-        warn: (msg, d) => myWarnTransport({ msg, ...d }),
-        info: (msg, d) => myInfoTransport({ msg, ...d }),
-        error: (msg, d) => myErrTransport({ msg, ...d }),
+        warn:  (msg, d) => myWarnTransport({ msg, data: d }),
+        info:  (msg, d) => myInfoTransport({ msg, data: d }),
+        error: (msg, d) => myErrTransport({ msg, data: d }),
     },
 });
 ```
 
----
 
 ## 11. Runtime DEBUG toggle (opt-in)
 
+Use `debugForMs()` (doesn't change base `level`) or `withLevelTimed()` (temporarily changes `level`).
+
 ```ts
-/** Example: enable debug logs for 60s after a signal/flag flip. */
-let debug = false, timer: ReturnType<typeof setTimeout> | null = null;
+import { createLogger, LogLevel } from 'log-sm';
 
-function enableDebug(ms = 60_000) {
-    debug = true;
-    // re-create or adjust your logger here if needed
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => (debug = false), ms);
-}
+const log = createLogger({ level: LogLevel.INFO });
 
-const log = createLogger({
-    level: debug ? LogLevel.DEBUG : LogLevel.INFO,
-});
+// Enable debug logs for 30s (and include stack traces for Error during the window)
+const stop = log.debugForMs(30_000, { allowInfo: false, includeStack: true });
 
-// somewhere:
-enableDebug(30_000);
+// ...later (optional)
+stop();
 ```
 
----
+Or: temporarily raise the base level for 30s:
+
+```ts
+log.withLevelTimed(LogLevel.DEBUG, 30_000);
+```
+
 
 ## 12. Per-sink deduplicate / rate-limit
 
 ```ts
 /** Drop identical error messages if they repeat too fast. */
 function makeDedupSink<T extends (msg: string, data?: unknown) => void>(inner: T, windowMs = 2000): T {
-    let lastKey = '', lastTs = 0;
-    return ((msg: string, data?: unknown) => {
-        const now = Date.now();
-        const key = msg + '|' + JSON.stringify(data ?? {});
-        if (key === lastKey && (now - lastTs) < windowMs) return;
-        lastKey = key; lastTs = now;
-        inner(msg, data);
-    }) as T;
+  let lastKey = '', lastTs = 0;
+  return ((msg: string, data?: unknown) => {
+    const now = Date.now();
+    const key = msg + '|' + JSON.stringify(data ?? {});
+    if (key === lastKey && (now - lastTs) < windowMs) return;
+    lastKey = key; lastTs = now;
+    inner(msg, data);
+  }) as T;
 }
 
 const sinks = {
-    error: makeDedupSink(console.error, 3000),
-    info:  console.info,
-    debug: console.debug,
+  error: makeDedupSink(console.error, 3000),
+  info:  console.info,
+  debug: console.debug,
 };
 
 const log = createLogger({ sinks });
 ```
 
----
 
 ## 13. Multi-transport fan-out
 
@@ -315,16 +315,15 @@ const httpSink  = (msg: string, d?: unknown) => {/* enqueue batch */};
 const multi = (a: any, b: any) => (msg: string, d?: unknown) => { a(msg, d); b(msg, d); };
 
 const log = createLogger({
-    sinks: {
-        error: multi(fileSink, httpSink),
-        info:  multi(fileSink, httpSink),
-        debug: multi(fileSink, httpSink),
-    },
+  sinks: {
+    error: multi(fileSink, httpSink),
+    info:  multi(fileSink, httpSink),
+    debug: multi(fileSink, httpSink),
+  },
 });
 
 ```
 
----
 
 ## 14. Browser usage (bundlers & CDN)
 
@@ -362,22 +361,19 @@ log.error(new Error('boom'));
 - Perf: avoid heavy `JSON.stringify` on circular objects; keep payloads lean.
 
 
----
-
 ## 15. Homey examples
 
 ```ts
 // Reuse Homey sinks
 createLogger({
-    sinks: {
-        error: (m, d) => Homey.error(m,d),
-        info:  (m, d) => Homey.log(m,d),
-        debug: (m, d) => Homey.log('[DEBUG]', m, d),
-    },
+  sinks: {
+    error: (m, d) => Homey.error(m,d),
+    info:  (m, d) => Homey.log(m,d),
+    debug: (m, d) => Homey.log('[DEBUG]', m, d),
+  },
 });
 ```
 
----
 
 ## 16. Guidelines
 
@@ -387,6 +383,7 @@ createLogger({
 - In dev: readable; in prod: compact, schema-stable.
 - Core stays “zero magic”; custom logic lives in user land.
 
+
 ---
 
 ### 🧭 Tip
@@ -395,15 +392,14 @@ If you discover a recurring pattern across projects,
 extract it into a small helper module or shareable sink preset,  
 **not** into the core — keeping `log-sm` tiny-first forever.
 
----
 
 ### 🔧 Troubleshooting
 
 - **“Why is `{input: ...}` attached or not attached?”**  
   → Controlled by `errorInputPolicy`.
-    - `'auto'`: attaches only for non-Error inputs.
-    - `'always'`: always attaches `{input}`.
-    - `'never'`: never attaches it.
+  - `'auto'`: attaches only for non-Error inputs.
+  - `'always'`: always attaches `{input}`.
+  - `'never'`: never attaches it.
 
 - **“My console formatter doesn’t run!”**  
   → The `consoleFormatter` runs **only** when you’re using default console sinks  
@@ -411,9 +407,9 @@ extract it into a small helper module or shareable sink preset,
 
 - **“WARN doesn’t show up.”**  
   → `warn()` visibility is gated by **`warnLevel`**.
-    - If you explicitly set `warnLevel`, it uses that threshold.
-    - If `warnLevel` is **not** set, it **falls back to `LogLevel.ERROR`** (i.e., WARN hidden when base level is below ERROR’s visibility).  
-      Also remember: sink routing (`sinks.warn`) is independent from level gating.
+  - If you explicitly set `warnLevel`, it uses that threshold.
+  - If `warnLevel` is **not** set, it **falls back to `LogLevel.ERROR`** (i.e., WARN hidden when base level is below ERROR’s visibility).  
+    Also remember: sink routing (`sinks.warn`) is independent from level gating.
 
 - **“Stack trace missing in production.”**  
   → Ensure your sink isn’t stripping it (see [UC-4](#4-drop-stack-traces-in-production-keep-them-in-dev)).  
@@ -427,7 +423,6 @@ extract it into a small helper module or shareable sink preset,
   → The logger obeys the current `level`.  
   If you used `debugForMs()` or similar runtime toggle, it expires automatically after the window ends.
 
----
 
 ### 👉 More...
 - See [**USE_CASES_ADV.md**](./USE_CASES_ADV.md) for more advanced use cases

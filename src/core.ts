@@ -73,7 +73,7 @@ export interface ILogger {
      * - Gating: visible only when `level >= ERROR`.
      */
     error(msg: Error | string, data?: unknown): void;
-    
+
     /**
      * Log a warning with optional structured data.
      * - Gating: controlled by `warnLevel` (default ERROR).
@@ -177,7 +177,7 @@ export type CreateLoggerOptions = {
      * - Otherwise: `NODE_ENV=production` => `prodDefault` (default ERROR), else INFO.
      */
     level?: LogLevel | LogLevelName;
-    
+
     /**
      * Optional level labels/prefixes (e.g., "[ERROR]", ...).
      * Applied to message text only (not to payload). Default: off.
@@ -194,14 +194,14 @@ export type CreateLoggerOptions = {
      * Only used when sinks are NOT provided; custom sinks take precedence.
      */
     consoleFormatter?: ConsoleFormatter;
-    
+
     /**
      * Separate gate for `warn()`.
      * Default: ERROR (WARN remains visible even when the base level is ERROR).
      * Set to INFO for conventional gating (WARN visible when base `level >= INFO`).
      */
     warnLevel?: LogLevel | LogLevelName;
-    
+
     /**
      * Fallback path for WARN when a custom `sinks.warn` is not provided. ('sinks' null is no-op)
      * - 'console' (default): console.warn (or formatted console if `consoleFormatter`)
@@ -211,7 +211,7 @@ export type CreateLoggerOptions = {
      * - 'ignore': drop output
      */
     warnFallback?: 'error' | 'info' | 'debug' | 'console' | 'ignore';
-    
+
     /**
      * Fallback path for DEBUG when a custom `sinks.debug` is not provided. ('sinks' null is no-op)
      * - 'console' (default): console.debug() (or formatted console if `consoleFormatter`)
@@ -229,24 +229,22 @@ export type CreateLoggerOptions = {
      * when logging an Error (it affects Error normalization only).
      */
     errorStackPolicy?: 'auto' | 'always' | 'never';
-    
+
     /**
      * How to merge the raw error input onto the error payload in `error()`.
-     * - 'auto' (default): if input is NOT an Error => include `{ [inputKey]: input }`.
-     * - 'always': always include `{ [inputKey]: input }`.
-     * - 'never': never include input (payload contains only normalized Error + data).
+     * Ex: `{ [inputKey]: input }`
+     * - 'never': never attach the original input to payload
+     * - 'ifNonError' (default): attach when input is not an instance of Error
+     * - 'always': always attach (even if Error or anything else)
      */
-    errorInputPolicy?:
-        | 'never'      // never attach the original input to payload
-        | 'ifNonError' // attach when input is not an instance of Error
-        | 'always';    // always attach (even if Error or anything else)
+    errorInputPolicy?: 'never' | 'ifNonError' | 'always';
 
     /**
      * Key name used to place non-Error inputs (e.g., a string) into the structured payload of `error()`.
      * Default: 'input'
      */
     inputKey?: string;
-    
+
     /**
      * Shallow truncation for long string fields in `data` (and normalized Error payload).
      * - Value > 0 trims strings to the given length and appends "...[truncated]".
@@ -254,32 +252,32 @@ export type CreateLoggerOptions = {
      * Default: 0 (off).
      */
     truncate?: number;
-    
+
     /**
      * Optional masker function for `data` and normalized errors.
      * Use to redact secrets or PII before output. Compose your own (e.g., makeMask(...)).
      */
     mask?: (value: unknown) => unknown;
-    
+
     /**
      * Static tags merged into every log call as shallow key-values (cheap merge).
      * Useful for stamping `service`, `module`, `tenant`, etc.
      */
     tags?: Record<string, string | number>;
-    
+
     /**
      * Merge order when applying tags at call time:
      * - 'dataWins' (default): `{ ...tags, ...data }`
      * - 'tagsWin'           : `{ ...data, ...tags }`
      */
     mergeTagsPolicy?: 'dataWins' | 'tagsWin'
-    
+
     /**
      * Optional environment bag used for level resolving and stack policy.
      * Provide in tests or browser; defaults to `process.env` when available.
      */
     env?: Record<string, string | undefined>;
-    
+
     /**
      * Default base level when `NODE_ENV=production` and no explicit `level` / `DEBUG_MODE` / `LOG_LEVEL` are provided.
      * Default: ERROR.
@@ -327,7 +325,7 @@ function normalizeError(err: Error & Record<string, unknown>, includeStack: bool
         if (k === 'name' || k === 'message' || k === 'stack') continue;
         out[k] = (err as any)[k];
     }
-    
+
     return out;
 }
 
@@ -365,20 +363,20 @@ function resolveLevel(
      * 3) `LOG_LEVEL=<NONE|ERROR|INFO|DEBUG|0..3>` (special: 'WARN'|'WRN' means use `warnLevel` as the base gate)
      * 4) `NODE_ENV=production` → `prodDefault` (default ERROR), else INFO
      */
-    
+
     // 1) explicit by `CreateLoggerOptions.level`
     const explicit = parseLogLevel(optLevel);
     if (explicit != null) return explicit;
-    
+
     // 2) DEBUG_MODE
     const dm = env?.DEBUG_MODE?.trim().toLowerCase();
     if (dm === '1' || dm === 'true' || dm === 'yes' || dm === 'on') return LogLevel.DEBUG;
-    
+
     // 3) LOG_LEVEL (with 'WARN' special)
     const w = env?.LOG_LEVEL?.trim().toUpperCase();
     const l = w && (w === 'WARN' || w === 'WRN') ? warnLevel : parseLogLevel(env?.LOG_LEVEL);
     if (l != null) return l;
-    
+
     // 4) NODE_ENV
     return  env?.NODE_ENV?.trim().toLowerCase() === 'production' ? (parseLogLevel(prodDefault) ?? LogLevel.ERROR) : LogLevel.INFO;
 }
@@ -493,16 +491,16 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
      * - To avoid crashing at logger creation time, console calls should be guarded:
      *   - If a console method is missing, fall back to a no-op sink.
      *   - `console.debug` is not guaranteed; optionally fall back to `console.log` or no-op.
-     * 
+     *
      * Important: console fallback is expected not to throw in normal runtimes.
      * If a console shim throws (or is non-bindable), the behavior follows the "Non-goals" section above.
      */
-    const C: any = (typeof console !== 'undefined' ? console : null);
+    const C = (GT as any)?.console;
     const cError = (C && typeof C.error === 'function') ? C.error.bind(C) : NULL_SINK;
     const cWarn  = (C && typeof C.warn  === 'function') ? C.warn.bind(C)  : NULL_SINK;
     const cInfo  = (C && typeof C.info  === 'function') ? C.info.bind(C)  : NULL_SINK;
     const cDebug = (C && typeof C.debug === 'function') ? C.debug.bind(C) :
-                         (C && typeof C.log   === 'function') ? C.log.bind(C) : NULL_SINK;
+        (C && typeof C.log   === 'function') ? C.log.bind(C) : NULL_SINK;
 
     /**
      * Build sinks with the "formatter applies only to console fallbacks" rule.
@@ -564,8 +562,7 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
      * - Fallback to `process.env` only when `process` exists.
      * - Do NOT assume `process` exists outside Node. Always guard with `typeof process !== 'undefined'`.
      */
-    // @ts-ignore
-    const env = opts.env ?? ((typeof process !== 'undefined' ? process.env : undefined) as
+    const env = opts.env ?? ((GT as any)?.process?.env as
         | Record<string, string | undefined>
         | undefined);
 
@@ -645,8 +642,8 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
          * - `setTimeout`/`clearTimeout` are not guaranteed in all JS runtimes.
          * - If timers are missing, we do not auto-expire timed overrides; disposer still works.
          */
-        const st = (typeof setTimeout === 'function') ? setTimeout : null;
-        const ct = (typeof clearTimeout === 'function') ? clearTimeout : null;
+        const st = (GT && typeof (GT as any).setTimeout === 'function') ? (GT as any).setTimeout.bind(GT) : null;
+        const ct = (GT && typeof (GT as any).clearTimeout === 'function') ? (GT as any).clearTimeout.bind(GT) : null;
         let disposed = false;
 
         if (ms && Number.isFinite(ms) && ms > 0 && st) {
@@ -731,7 +728,7 @@ export function createLogger(options?: CreateLoggerOptions): ILogger
             return  createLogger(co);
         },
     };
-    
+
     // Return the logger instance
     return opts.tags ? withTags(api, opts.tags, mergeTagsDataWins) : api;
 }
@@ -749,7 +746,7 @@ type Token = {
 
     // TS note: `ReturnType<typeof setTimeout>` depends on lib typings (dom/node).
     // Adjust if your TS lib config is minimal.
-    timer?: ReturnType<typeof setTimeout>;
+    timer?: any;
 };
 
 
@@ -816,7 +813,7 @@ function withTags(
             return base.child(co);
         },
     };
-    
+
     return sibling;
 }
 

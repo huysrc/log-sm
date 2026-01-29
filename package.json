@@ -23,9 +23,11 @@
   },
   "homepage": "https://github.com/huysrc/log-sm#readme",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/redact.*"
+  ],
   "main": "./dist/core.cjs",
-  "module": "./dist/core.mjs",
+  "module": "./dist/core.js",
   "types": "./dist/core.d.ts",
   "files": [
     "dist",
@@ -36,17 +38,20 @@
     ".": {
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js",
-      "require": "./dist/core.cjs"
+      "require": "./dist/core.cjs",
+      "default": "./dist/core.js"
     },
     "./format": {
       "types": "./dist/format.d.ts",
       "import": "./dist/format.js",
-      "require": "./dist/format.cjs"
+      "require": "./dist/format.cjs",
+      "default": "./dist/format.js"
     },
     "./redact": {
       "types": "./dist/redact.d.ts",
       "import": "./dist/redact.js",
-      "require": "./dist/redact.cjs"
+      "require": "./dist/redact.cjs",
+      "default": "./dist/redact.js"
     }
   },
   "scripts": {
@@ -54,7 +59,8 @@
     "clean": "rimraf dist",
     "prepare": "npm run build",
     "release": "changeset publish",
-    "test": "node tests"
+    "test": "npm run build && node --test",
+    "clean-test-pack-check": "npm ci && npm test && npm pack --dry-run && node -e \"import('log-sm').then(m=>console.log(Object.keys(m)))\""
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8",

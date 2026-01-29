@@ -13,7 +13,8 @@ export default defineConfig({
     minify: true,
     treeshake: true,
     outDir: 'dist',
-    skipNodeModulesBundle: true
+    skipNodeModulesBundle: true,
+    platform: 'neutral'
 });
 
 // export default defineConfig([{

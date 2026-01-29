@@ -3,6 +3,7 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 tests/
+tsup.config.bundled_*.mjs
 
 # npm lock file (not needed for packages)
 package-lock.json
@@ -613,3 +614,4 @@ fabric.properties
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
 
+!/tsup.config.bundled_iozd0tcex6.mjs

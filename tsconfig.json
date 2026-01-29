@@ -15,7 +15,7 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
-    "outDir": "dist",
+    "outDir": "dist"
   },
   "include": ["src"]
 }

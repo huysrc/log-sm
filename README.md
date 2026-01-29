@@ -9,47 +9,44 @@
 └────────────────────────────────┘
 ```
 
-> Zero-deps • Zero noise • Just logs — clean, fast, predictable, and environment-aware.
+A **zero-deps**, tiny, predictable logger for **Node + Browser** with:
+- **Strict gating** for `ERROR / INFO / DEBUG`
+- **Independent WARN gate** (WARN is not a base level)
+- Optional **custom sinks** (file/HTTP/OTel/etc.) or clean **console fallback**
+- Optional **mask** (redaction) and **truncate** (shallow) pipeline
+- Runtime **temporary debug window** (`debugForMs`) and scoped overrides (`withLevel`, `withLevelTimed`)
+- Works across runtimes (Node, Homey, browsers, workers, SSR, test runners) with guarded capability checks
 
-A **zero-dependency**, **ultra-fast**, **structured logger** for **Node**, **Homey**, and **Web** runtimes.  
-Built around a **tiny-first core** with optional **deep redaction**, **pluggable sinks**, and **predictable levels** —  
-ideal for developers who value **clarity**, **lightweight design**, and **control** without heavy abstractions.
+> Design note: `log-sm` built around a **tiny-first core** and predictable. 
+> It does **not** guarantee “logging never throws” for exotic/adversarial inputs
+> (revoked Proxy, throwing getters, broken polyfills, etc.). If you need “never throw”,
+> sanitize inputs or wrap your `mask()` with try/catch.
 
 
-## 🧬 Example Preview
+## 📦 Install
+
+```bash
+npm i log-sm
+# or
+yarn add log-sm
+# or
+pnpm add log-sm
+```
+
+No peer dependencies. TypeScript types included.
+
+## 🚀 Quick start
 
 ```ts
 import { createLogger } from 'log-sm';
 
 const log = createLogger();
 
-log.info('Server started', { port: 8080 });
-// Server started { port: 8080 }
+log.error('something failed', { code: 'E_FAIL' });
+log.warn('slow request', { ms: 1200 });
+log.info('server started', { port: 8080 });
+log.debug('details', { a: 1 });
 ```
-
-🔹 Add deep redaction (optional):
-
-```ts
-import { createLogger } from 'log-sm';
-import { makeMask } from 'log-sm/redact';
-
-const mask = makeMask(undefined, { ciKeys: true, partialMatch: true });
-const log = createLogger({ mask });
-
-log.debug('Login', { user: 'me', password: 'abc123' });
-// Login { user: "me", password: "***" }
-```
-
-🔹 Enable temporary debug:
-
-```ts
-const log = createLogger();
-
-log.debugForMs(3000); // enable DEBUG for 3 seconds
-log.debug('trace start');
-// after 3s, debug reverts automatically
-```
-
 
 ## ✨ Features
 
@@ -73,106 +70,254 @@ log.debug('trace start');
 Each `createLogger()` call builds a specialized instance.  
 All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the returned logger runs branch-free.
 
-**Benefits:**
+### Benefits:
 - Zero runtime branching — hot paths as fast as `console.log`.
 - Predictable and environment-aware.
 - No globals, no side effects.
 - Fully composable (`child()`, custom sinks).
 
+---
 
-## ⚠️ Why No `LogLevel.WARN`
+## Levels & WARN policy
 
-`log-sm` uses only three strict levels:  
-`ERROR`, `INFO`, and `DEBUG` — and gives `WARN` its own gate instead of being a level.
+**log-sm** has base gating levels:
+- `NONE` (`0`)
+- `ERROR` (`1`)
+- `INFO` (`2`)
+- `DEBUG` (`3`)
 
-| Concept        | Behavior                                                      |
-|----------------|---------------------------------------------------------------|
-| `warnLevel`    | Controls when `warn()` is visible (default: same as `ERROR`). |
-| `warnFallback` | Redirects `warn()` if no custom sink is defined.              |
+But _WARN_ is special:
+- `warn()` is gated by `warnLevel` (default: `error`)
+- This means WARN can still be visible even when base `level === 'error'`
 
+In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
+This approach keeps level gating simple, predictable, and expressive.
+
+### Example:
 ```ts
-const log = createLogger({
-    warnLevel: LogLevel.INFO,     // show warnings like info
-    warnFallback: 'error',        // reuse error sink
-});
+const log = createLogger({ level: 'error' }); // base gate: error
+log.warn('this is visible by default');       // because warnLevel defaults to 'error'
+log.info('not visible');
 ```
 
-In short: warn() behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
-This approach keeps level gating simple, predictable, and expressive.
+If you want conventional behavior (WARN visible only when INFO is enabled):
+
+```ts
+const log = createLogger({ level: 'error', warnLevel: 'info' });
+log.warn('not visible now');
+```
+
+## Level resolution from `env`
+
+If `CreateLoggerOptions.level` is omitted, base level is resolved by:
+ 1. `DEBUG_MODE=1|true|yes|on` (case-insensitive) → `debug`
+ 2. `LOG_LEVEL=NONE|ERROR|INFO|DEBUG|OFF|ERR|DBG|0..3` (case-insensitive)
+    - Special-case: `LOG_LEVEL=WARN|WRN` (case-insensitive) → base level becomes `warnLevel`
+ 3. Otherwise:
+    - `NODE_ENV=production` → `prodDefault` (default: `error`)
+    - else → `info`
+
+You can provide `options.env` (recommended for tests / browser / SSR) instead of relying on `process.env`.
 
 ---
 
-## 🧬 CreateLoggerOptions
+## 🦭 createLogger(options)
+
+### Options overview
 
 ```ts
 export type CreateLoggerOptions = {
-    sinks?: {
-        error?: (msg: string, data?: unknown) => void;
-        warn?:  (msg: string, data?: unknown) => void;
-        info?:  (msg: string, data?: unknown) => void;
-        debug?: (msg: string, data?: unknown) => void;
-    } | null;
+  sinks?: { error?: Sink; warn?: Sink; info?: Sink; debug?: Sink } | null;
 
-    level?: LogLevel | 'none' | 'error' | 'info' | 'debug';     // base gate for info/debug
-    levelTags?: { error?: string; warn?: string; info?: string; debug?: string } | null;
+  level?: LogLevel | 'none' | 'error' | 'info' | 'debug';
+  levelTags?: { error?: string; warn?: string; info?: string; debug?: string } | null;
 
-    warnLevel?: LogLevel | 'none' | 'error' | 'info' | 'debug'; // separate gate for warn()
-    warnFallback?: 'error'|'info'|'debug'|'console'|'ignore';   // default: 'console'
-    debugFallback?: 'info'|'console'|'ignore';    // default: 'console'
+  warnLevel?: LogLevel | 'none' | 'error' | 'info' | 'debug';
+  warnFallback?: 'error' | 'info' | 'debug' | 'console' | 'ignore';
+  debugFallback?:
+    | 'console'     // default: console.debug()
+    | 'info'        // reuse info sink
+    | 'ignore';     // drop output
+  errorStackPolicy?:
+    | 'auto'        // default: include stack unless `NODE_ENV=production`
+    | 'always'      // always include stack when an Error is logged.
+    | 'never';      // never include stack.
+  errorInputPolicy?:
+    | 'never'       // never attach the original input to payload
+    | 'ifNonError'  // attach when input is not an instance of Error
+    | 'always';     // always attach (even if Error or anything else)
+  inputKey?: string;
 
-    includeStack?: 'never'|`ifNonError`|'always'; // when to include stack
-    errorInputPolicy?: 'auto'|'always'|'never';   // merge rule for error inputs
-    inputKey?: string;                            // key for non-Error inputs (default: 'input')
+  truncate?: number;
+  mask?: (v: unknown) => unknown;
+  tags?: Record<string, string|number>;
+  mergeTagsPolicy?:
+    | 'dataWins'    // { ...tags, ...data }
+    | 'tagsWin';    // { ...data, ...tags }
+  consoleFormatter?: ConsoleFormatter;
 
-    truncate?: number;                            // shallow truncate long strings
-    mask?: (v: unknown) => unknown;               // optional redact function
-    tags?: Record<string, string|number>;         // static tags merged on each log
-    mergeTagsPolicy?: 'dataWins'|'tagsWin';       // merge order
-    consoleFormatter?: ConsoleFormatter;          // optional console formatter (color, JSON...)
-
-    env?: Record<string, string|undefined>;       // custom env bag
-    prodDefault?: LogLevel;                       // default prod level (default: ERROR)
+  env?: Record<string, string|undefined>;
+  prodDefault?: LogLevel | 'none' | 'error' | 'info' | 'debug';
 };
 ```
 
----
+### ⚙️ Sinks Behavior (important)
+- `sinks: null` → no-op logger (all calls do nothing)
+- `sinks: undefined` → fallback to console (console.error/warn/info/debug)
+- `sinks: { ... }` → use provided sinks where present
+  - Missing `warn` / `debug` follow `warnFallback` / `debugFallback`
+  - Missing `error` / `info` fall back to `console`
 
-### ⚙️ Behavior Summary
+Custom `sinks.*` take precedence over `consoleFormatter`.
 
-| Option             | Purpose                            | Default         |
-|--------------------|------------------------------------|-----------------|
-| `sinks`            | Custom output targets              | `console.*`     |
-| `sinks: null`      | Silent (no-op) logger              | —               |
-| `levelTags`        | Apply prefix strings per level     | —               |
-| `warnLevel`        | Separate warn visibility           | `ERROR`         |
-| `warnFallback`     | Redirect warn() when missing sink  | `console.warn`  |
-| `debugFallback`    | Redirect debug() when missing sink | `console.debug` |
-| `includeStack`     | Stack inclusion rule               | `'ifNonError'`  |
-| `errorInputPolicy` | Input merge rule for error()       | `'auto'`        |
-| `truncate`         | Clamp long string fields           | 0 (off)         |
-| `mask`             | Apply redaction before output      | —               |
-| `tags`             | Static metadata (cheap merge)      | —               |
-| `mergeTagsPolicy`  | Tag vs data precedence             | `dataWins`      |
-| `consoleFormatter` | Single-line or colorized output    | —               |
-| `prodDefault`      | Override prod default level        | `ERROR`         |
+### ⚙️ Another Behavior Summary
 
----
+| Option             | Purpose                                     | Default           |
+|--------------------|---------------------------------------------|-------------------|
+| `levelTags`        | Apply prefix strings per level              | —                 |
+| `warnLevel`        | Separate warn visibility                    | `error`           |
+| `warnFallback`     | Redirect `warn()` when missing sink         | `console.warn()`  |
+| `debugFallback`    | Redirect `debug()` when missing sink        | `console.debug()` |
+| `errorStackPolicy` | When to include stack                       | `'auto'`          |
+| `errorInputPolicy` | Merge rule for error inputs                 | `'auto'`          |
+| `inputKey`         | Key for non-Error inputs                    | `'input'`         |
+| `truncate`         | Clamp long string fields (per-string field) | `0` (off)         |
+| `mask`             | Apply redaction before output               | —                 |
+| `tags`             | Static metadata merged on each log          | —                 |
+| `mergeTagsPolicy`  | Tag vs data precedence (merge order)        | `dataWins`        |
+| `consoleFormatter` | Optional console formatter (color, JSON...) | —                 |
+| `env`              | Custom env bag                              | —                 |
+| `prodDefault`      | Override prod default level                 | `error`           |
 
-## 🦭 LogLevel
+### ⚙️ Console formatter
+#### Correct signature
+
+In `core.ts`:
 
 ```ts
-export const enum LogLevel {
-    NONE = 0,
-    ERROR = 1,
-    INFO  = 2,
-    DEBUG = 3
+export interface ConsoleFormatter {
+    (level: 'error' | 'warn' | 'info' | 'debug', msg: string, data?: unknown): { msg: string; data?: unknown };
 }
 ```
 
-- Auto-resolves from environment:
-    - `DEBUG_MODE=1|true|yes|on` → DEBUG
-    - `LOG_LEVEL=ERROR|INFO|DEBUG|0..3`
-    - Default: `ERROR` in production, else `INFO`.
+So a formatter must return `{ msg, data }`.
+
+#### Using `format.ts` helper (adapter)
+
+`format.ts` provides `createConsoleFormatter(colorMode)` which returns a function that formats a single string line.
+
+To use it with `core.ts`, wrap it like this:
+```ts
+import { createLogger } from 'log-sm';
+import { createConsoleFormatter } from 'log-sm/format';
+
+const line = createConsoleFormatter('auto');
+
+const log = createLogger({
+  consoleFormatter: (level, msg, data) => ({
+    msg: line(level, msg, data),
+    // We already embedded JSON into msg above, so skip structured payload:
+    data: undefined,
+  }),
+});
+```
+
+If you want to keep a structured payload (recommended for devtools), do:
+```ts
+const line = createConsoleFormatter('auto');
+
+const log = createLogger({
+  consoleFormatter: (level, msg, data) => ({
+    msg: line(level, msg), // no JSON here
+    data,                  // keep payload structured
+  }),
+});
+```
+
+### ⚙️ Error logging behavior
+`error()` accepts:
+- Error (or “error-like”) → normalized payload: { name, message, stack? } plus enumerable custom fields
+- non-Error input (e.g. string) → payload uses { [inputKey]: input } depending on errorInputPolicy
+
+Stack inclusion:
+- errorStackPolicy: 'auto' → include stack unless NODE_ENV=production
+- temporary debug window (debugForMs) can force stack inclusion while active
+
+### ⚙️ Masking & truncation pipeline
+If provided:
+- Order is: mask → truncate
+- truncate is shallow per string field, and also stringifies BigInt / summarizes Buffer.
+
+Example:
+```ts
+import { createLogger } from 'log-sm';
+import { makeMask } from 'log-sm/redact';
+
+const mask = makeMask(); // uses DEFAULT_MASK_KEYS
+
+const log = createLogger({
+    mask,
+    truncate: 2000,
+});
+
+log.info('login', { user: 'a', password: 'secret', token: 'abc', bio: '...' });
+```
+> `redact.ts` supports deep redaction with guards and special cases (Map/Set/TypedArray/Error/Buffer).
+
+### ⚙️ Tags, withTags(), child()
+
+#### Static tags
+```ts
+const log = createLogger({ tags: { service: 'api', env: 'prod' } });
+log.info('started', { port: 8080 }); // payload includes service/env
+```
+
+#### withTags()
+```ts
+const log = createLogger();
+const auth = log.withTags({ module: 'auth' });
+
+auth.warn('invalid credentials', { userId: 123 });
+```
+
+#### child()
+`child()` shallow-merges options (`{...parentOpts, ...childOpts}`).
+```ts
+const log = createLogger({ level: 'info' });
+const noisy = log.child({ level: 'debug' });
+
+noisy.debug('enabled here');
+```
+
+### ⚙️ Runtime overrides
+
+#### debugForMs(ms)
+Enables a temporary debug window without changing level:
+```ts
+const log = createLogger({ level: 'error' });
+
+const stop = log.debugForMs(10_000, { allowInfo: true, includeStack: true });
+
+log.debug('visible during window');
+log.info('also visible during window');
+stop(); // end early (idempotent)
+```
+
+#### withLevel(level, fn)
+Scoped override for sync/async:
+```ts
+await log.withLevel('debug', async (l) => {
+l.debug('inside scope');
+});
+```
+
+#### withLevelTimed(level, ms)
+```ts
+const dispose = log.withLevelTimed('debug', 5000);
+dispose(); // end early
+```
+
+Timers note: in runtimes without timers, timed overrides won’t auto-expire (manual dispose still works).
 
 ---
 
@@ -214,65 +359,11 @@ export type RedactOptions = {
 
 ---
 
-## 🎨 Format API (`log-sm/format`)
-
-```ts
-import { createConsoleFormatter } from 'log-sm/format';
-```
-
-```ts
-const formatter = createConsoleFormatter('auto'); // 'off' | 'auto' | 'on'
-```
-
-- Adds timestamp + color automatically (TTY detection).
-- Safe JSON serialization for payloads.
-- Returns a `(level, msg, data)` formatter usable in `CreateLoggerOptions.consoleFormatter`.
-
----
-
-## 🧣 Example Use Cases
-
-### 1️⃣ Custom sinks for embedded apps
-
-```ts
-const log = createLogger({
-  sinks: { error: Homey.error, info: Homey.log },
-  warnFallback: 'error'
-});
-```
-
-### 2️⃣ No-op logger
-
-```ts
-const logger = createLogger({ sinks: null });
-logger.debug('not printed');
-```
-
-### 3️⃣ Child logger with static tags
-
-```ts
-const base = createLogger();
-const api = base.child({ svc: 'api' });
-api.info('Listening', { port: 8080 });
-// { svc: 'api', port: 8080 }
-```
-
-### 4️⃣ Colorized console output
-
-```ts
-import { createConsoleFormatter } from 'log-sm/format';
-const log = createLogger({ consoleFormatter: createConsoleFormatter('on') });
-```
-
----
-
 ## 🚀 Performance Tips
 
 - Avoid `mask` and `truncate` unless necessary.
 - Use `child()` for contextual metadata instead of re-merging objects.
 - Each logger is a pre-compiled pipeline — hot path ~ `console.log` speed.
-
----
 
 ## ❓ FAQ
 
@@ -285,27 +376,9 @@ const log = createLogger({ consoleFormatter: createConsoleFormatter('on') });
 **Q:** Will it break on BigInt or circular objects?  
 **A:** No — built-in formatters are JSON-safe and circular-tolerant.
 
----
-
-## 📦 Install
-
-```bash
-npm i log-sm
-# or
-pnpm add log-sm
-# or
-yarn add log-sm
-```
-
-No peer dependencies. TypeScript types included.
-
----
-
 ## 🧬 License
 
 MIT — © 2025 [HuySrc](https://huynguyen.net)
-
----
 
 ## 📘 More Examples & Recipes
 
