@@ -120,9 +120,9 @@ You can provide `options.env` (recommended for tests / browser / SSR) instead of
 
 ---
 
-## 🦭 Logger API (`log-sm`)
+## 🦭 Logger API
 
-### 🧮 Options Overview (`createLogger(options)`)
+### 🧮 Options Overview - `createLogger(options)`
 
 ```ts
 export type CreateLoggerOptions = {
@@ -188,7 +188,7 @@ Custom `sinks.*` take precedence over `consoleFormatter`.
 | `env`              | Custom env bag                              | —                 |
 | `prodDefault`      | Override prod default level                 | `error`           |
 
-### ⚙️ Console formatter
+### ⚙️ Console Formatter
 
 `consoleFormatter` lets you customize how logs are printed **when using the built-in console fallback**.
 
@@ -249,7 +249,7 @@ const log = createLogger({
   `sinks.error`, ...), formatting should be handled in those sinks.
 - For redaction/truncation, prefer using `mask/truncate` options and keep `consoleFormatter` focused on presentation.
 
-### ⚙️ Error logging behavior
+### ⚙️ Error Logging Behavior
 `error()` accepts:
 - Error (or “error-like”) → normalized payload: { name, message, stack? } plus enumerable custom fields
 - non-Error input (e.g. string) → payload uses { [inputKey]: input } depending on errorInputPolicy
@@ -258,7 +258,7 @@ Stack inclusion:
 - errorStackPolicy: 'auto' → include stack unless NODE_ENV=production
 - temporary debug window (debugForMs) can force stack inclusion while active
 
-### ⚙️ Masking & truncation pipeline
+### ⚙️ Masking & Truncation Pipeline
 If provided:
 - Order is: mask → truncate
 - truncate is shallow per string field, and also stringifies BigInt / summarizes Buffer.
@@ -304,7 +304,7 @@ const noisy = log.child({ level: 'debug' });
 noisy.debug('enabled here');
 ```
 
-### ⚙️ Runtime overrides
+### ⚙️ Runtime Overrides
 
 #### 🔹 debugForMs(ms)
 Enables a temporary debug window without changing level:
@@ -350,7 +350,7 @@ import { makeMask, redact, extendDefaultMaskKeys } from 'log-sm/redact';
   `card`, `cvv`, `ssn`
 
 
-### RedactOptions
+### Redact Options
 ```ts
 export type RedactOptions = {
   mask?: string;               // replace value for matching keys. (default: '***')
