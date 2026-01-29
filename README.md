@@ -2,12 +2,7 @@
 [![bundle size](https://img.shields.io/bundlephobia/minzip/log-sm?style=flat-square)](https://bundlephobia.com/result?p=log-sm)
 [![license](https://img.shields.io/github/license/huysrc/log-sm?style=flat-square)](./LICENSE)
 
-# 🪶log-sm
-```
-┌────────────────────────────────┐
-│   log-sm · Smart Minimal Log   │
-└────────────────────────────────┘
-```
+# 🪶log-sm - Smart Minimal Logger
 
 A **zero-deps**, tiny, predictable logger for **Node + Browser** with:
 - **Strict gating** for `ERROR / INFO / DEBUG`
@@ -391,10 +386,6 @@ export type RedactOptions = {
 **Q:** Will it break on BigInt or circular objects?  
 **A:** No — built-in formatters are JSON-safe and circular-tolerant.
 
-## 🔒 License
-
-MIT — © 2026 [HuySrc](https://huynguyen.net)
-
 ## 📘 More Examples & Recipes
 
 See more practical patterns for customizing and extending **log-sm** without changing the core:
@@ -404,5 +395,6 @@ See more practical patterns for customizing and extending **log-sm** without cha
 - [**USE_CASES_ADV.md**](./USE_CASES_ADV.md) — advanced production patterns:
     - filtering by message pattern, grouped console logs, global error capture, remote debug toggles, performance timing, and bridging to external loggers.
 
----
+## 🔒 License
 
+MIT — © 2026 [HuySrc](https://huynguyen.net) ദ്ദി(•̀ ᗜ <)
