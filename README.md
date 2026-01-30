@@ -2,7 +2,7 @@
 [![bundle size](https://img.shields.io/bundlephobia/minzip/log-sm?style=flat-square)](https://bundlephobia.com/result?p=log-sm)
 [![license](https://img.shields.io/github/license/huysrc/log-sm?style=flat-square)](./LICENSE)
 
-# 🪶log-sm - Smart Minimal Logger
+# 🪶 log-sm - Smart Minimal Logger
 
 A **zero-deps**, tiny, predictable logger for **Node + Browser** with:
 - **Strict gating** for `ERROR / INFO / DEBUG`
@@ -46,16 +46,16 @@ log.debug('details', { a: 1 });
 ## ✨ Features
 
 - 🪶 **Tiny Core** – zero dependencies, minimal branching, 100% tree-shakable.
-- 🧬 **Pluggable Sinks** – console fallback or custom transport.
-- 🧠 **Structured Logging** – consistent `(message, data)` signature.
-- 🦭 **Environment-Aware Levels** – auto resolves from `LOG_LEVEL`, `DEBUG_MODE`, or `NODE_ENV`.
+- 🧩 **Pluggable Sinks** – console fallback or custom transport.
+- 🧬 **Structured Logging** – consistent `(message, data)` signature.
+- 🐘 **Environment-Aware Levels** – auto resolves from `LOG_LEVEL`, `DEBUG_MODE`, or `NODE_ENV`.
 - ⚠️ **Smart WARN Policy** – no `WARN` enum level, it shares `ERROR` threshold by default (customizable by `warnLevel`).
-- ⚙️ **Production-Ready Defaults** – defaults to `INFO` in dev, `ERROR` in production (overrideable by `prodDefault`).
+- 📦 **Production-Ready Defaults** – defaults to `INFO` in dev, `ERROR` in production (overrideable by `prodDefault`).
 - 🔒 **Mask & Truncate** – deep redact sensitive fields and clamp long strings. (optional)
 - 🌈 **Console Formatter** – optional, colorized, single-line output.
-- 🦾 **Stack Policy** – flexible `auto | always | never` inclusion for Errors.
-- 🧱 **Child Loggers** – attach contextual tags (service, tenant, etc.) cheaply.
-- 🧮 **Type-Safe** – written in pure TypeScript, Node/browser compatible.
+- 🧮 **Stack Policy** – flexible `auto | always | never` inclusion for Errors.
+- 🤝 **Child Loggers** – attach contextual tags (service, tenant, etc.) cheaply.
+- 🌱 **Type-Safe** – written in pure TypeScript, Node/browser compatible.
 
 
 ## 🧠 Philosophy
@@ -72,7 +72,7 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 - Fully composable (`child()`, custom sinks).
 
 
-## 🧱 Levels & WARN policy
+## ⚡ Levels & WARN policy
 
 **log-sm** has base gating levels:
 - `NONE` (`0`)
@@ -87,7 +87,7 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
 This approach keeps level gating simple, predictable, and expressive.
 
-### 🦾 Example:
+### 🧾 Example:
 ```ts
 const log = createLogger({ level: 'error' }); // base gate: error
 log.warn('this is visible by default');       // because warnLevel defaults to 'error'
@@ -101,7 +101,7 @@ const log = createLogger({ level: 'error', warnLevel: 'info' });
 log.warn('not visible now');
 ```
 
-### 🧬 Level resolution from `env`
+### 📌 Level resolution from `env`
 
 If `CreateLoggerOptions.level` is omitted, base level is resolved by:
  1. `DEBUG_MODE=1|true|yes|on` (case-insensitive) → `debug`
@@ -386,7 +386,7 @@ export type RedactOptions = {
 **Q:** Will it break on BigInt or circular objects?  
 **A:** No — built-in formatters are JSON-safe and circular-tolerant.
 
-## 📘 More Examples & Recipes
+## 📖 More Examples & Recipes
 
 See more practical patterns for customizing and extending **log-sm** without changing the core:
 
@@ -395,6 +395,6 @@ See more practical patterns for customizing and extending **log-sm** without cha
 - [**USE_CASES_ADV.md**](./USE_CASES_ADV.md) — advanced production patterns:
     - filtering by message pattern, grouped console logs, global error capture, remote debug toggles, performance timing, and bridging to external loggers.
 
-## 🔒 License
+## ✎ᝰ. License
 
-MIT — © 2026 [HuySrc](https://huynguyen.net) ദ്ദി(•̀ ᗜ <)
+MIT — © 2026 [⋆⋅☆⋅⋆ HuySrc ⋆⋅☆⋅⋆](https://huynguyen.net) ദ്ദി(•̀ ᗜ <)
