@@ -22,6 +22,7 @@ A **zero-deps**, tiny, predictable logger for **Node + Browser**.
 > It does **not** guarantee “logging never throws” under exotic/adversarial inputs (revoked Proxy, throwing getters, broken polyfills).  
 > If you need “never throw”, sanitize inputs or wrap `mask()` with try/catch.
 
+---
 
 ## 📦 Install
 
@@ -33,6 +34,7 @@ npm i log-sm
 
 No peer dependencies. TypeScript types included.
 
+---
 
 ## 🚀 Quick start
 
@@ -47,6 +49,7 @@ log.info('server started', { port: 8080 });
 log.debug('details', { a: 1 });
 ```
 
+---
 
 ## ⚙️ Levels & the WARN rule
 
@@ -67,6 +70,8 @@ const log = createLogger({ level: 'error', warnLevel: 'info' });
 log.warn('not visible now');
 ```
 
+---
+
 ## 🔌 Sinks (console fallback)
 
 - `sinks: undefined` → uses console (`console.error/warn/info/debug`)
@@ -84,6 +89,8 @@ const log = createLogger({
   },
 });
 ```
+
+---
 
 ## 🔒 Redaction + truncation (opt-in)
 
@@ -103,6 +110,8 @@ log.info('login', { user: 'a', password: 'secret', token: 'abc' });
 
 `log-sm/redact` is cycle-safe, depth-limited, and handles `Error`, `Map/Set`, typed arrays, Buffer.
 
+---
+
 ## 🧩 Tags & child loggers
 
 ```ts
@@ -114,6 +123,8 @@ auth.warn('invalid credentials', { userId: 123 });
 const noisy = log.child({ level: 'debug' });
 noisy.debug('enabled here');
 ```
+
+---
 
 ## ⏱️ Runtime debug controls
 
