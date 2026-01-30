@@ -394,9 +394,19 @@ export type RedactOptions = {
 See more practical patterns for customizing and extending **log-sm** without changing the core:
 
 - [**USE_CASES.md**](./USE_CASES.md) — common real-world usages:
-    - error input policies, console/custom sinks, JSON logging, redaction, deduplication, tags, and runtime debug.
+    - error input policies
+    - console/custom sinks
+    - JSON logging
+    - redaction, deduplication
+    - tags, and runtime debug.
 - [**USE_CASES_ADV.md**](./USE_CASES_ADV.md) — advanced production patterns:
-    - filtering by message pattern, grouped console logs, global error capture, remote debug toggles, performance timing, and bridging to external loggers.
+    - filtering by message pattern
+    - grouped console logs
+    - global error capture
+    - remote debug toggles
+    - performance timing
+    - bridging to external loggers
+    - and more...
 
 ## ✎ᝰ. License
 
