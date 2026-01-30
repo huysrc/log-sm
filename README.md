@@ -87,9 +87,8 @@ declare const LogLevel: {
 - `warn()` is gated by `warnLevel` (default: `error`)
 - This means WARN can still be visible even when base `level === 'error'`
 
->In short:
-> - `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.
-> - This approach keeps level gating simple, predictable, and expressive.
+>In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters,  
+>and you decide where it flows. This approach keeps level gating simple, predictable, and expressive.
 
 **Example:**
 ```ts
