@@ -72,22 +72,25 @@ All options (`mask`, `truncate`, `formatter`, etc.) are applied once — the ret
 - Fully composable (`child()`, custom sinks).
 
 
-## ⚡ Levels & WARN policy
+## 🔑 Levels & WARN policy
 
-**log-sm** has base gating levels:
-- `NONE` (`0`)
-- `ERROR` (`1`)
-- `INFO` (`2`)
-- `DEBUG` (`3`)
-
-⚠️ But _WARN_ is special:
+`log-sm` has these gating levels:
+```ts
+declare const LogLevel: {
+  readonly NONE: 0;
+  readonly ERROR: 1;
+  readonly INFO: 2;
+  readonly DEBUG: 3;
+};
+```
+### ⚠️ _WARN_ is special; It is not a base gating level, but:
 - `warn()` is gated by `warnLevel` (default: `error`)
 - This means WARN can still be visible even when base `level === 'error'`
 
-In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
-This approach keeps level gating simple, predictable, and expressive.
+>In short: `warn()` behaves like an attitude, not a level — it stays visible when it matters, and you decide where it flows.  
+>This approach keeps level gating simple, predictable, and expressive.
 
-### 🧾 Example:
+**Example:**
 ```ts
 const log = createLogger({ level: 'error' }); // base gate: error
 log.warn('this is visible by default');       // because warnLevel defaults to 'error'
@@ -111,7 +114,7 @@ If `CreateLoggerOptions.level` is omitted, base level is resolved by:
     - `NODE_ENV=production` → `prodDefault` (default: `error`)
     - else → `info`
 
-You can provide `options.env` (recommended for tests / browser / SSR) instead of relying on `process.env`.
+>Tip: You can provide `options.env` (recommended for tests / browser / SSR) instead of relying on `process.env`.
 
 ---
 
@@ -162,7 +165,7 @@ export type CreateLoggerOptions = {
   - Missing `warn` / `debug` follow `warnFallback` / `debugFallback`
   - Missing `error` / `info` fall back to `console`
 
-Custom `sinks.*` take precedence over `consoleFormatter`.
+>Note: Custom `sinks.*` take precedence over `consoleFormatter`.
 
 ### ⚙️ Another Behavior Summary
 
@@ -239,10 +242,10 @@ const log = createLogger({
 });
 ```
 
-#### Notes
-- `consoleFormatter` applies only to the console fallback. If you provide custom sinks (`sinks.info`,
-  `sinks.error`, ...), formatting should be handled in those sinks.
-- For redaction/truncation, prefer using `mask/truncate` options and keep `consoleFormatter` focused on presentation.
+>**Notes:**
+>- `consoleFormatter` applies only to the console fallback. If you provide custom sinks (`sinks.info`,
+>  `sinks.error`, ...), formatting should be handled in those sinks.
+>- For redaction/truncation, prefer using `mask/truncate` options and keep `consoleFormatter` focused on presentation.
 
 ### ⚙️ Error Logging Behavior
 `error()` accepts:
@@ -258,7 +261,7 @@ If provided:
 - Order is: mask → truncate
 - truncate is shallow per string field, and also stringifies BigInt / summarizes Buffer.
 
-Example:
+**Example:**
 ```ts
 import { createLogger } from 'log-sm';
 import { makeMask } from 'log-sm/redact';
@@ -327,7 +330,7 @@ const dispose = log.withLevelTimed('debug', 5000);
 dispose(); // end early
 ```
 
-Timers note: in runtimes without timers, timed overrides won’t auto-expire (manual dispose still works).
+>Timers note: in runtimes without timers, timed overrides won’t auto-expire (manual dispose still works).
 
 ---
 
